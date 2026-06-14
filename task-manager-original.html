@@ -1,0 +1,609 @@
+<!doctype html>
+<html lang="ja">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>あわいプロジェクト | 島と都市のあわいに帰る</title>
+    <meta
+      name="description"
+      content="あわいプロジェクトは、島根県海士町と都市のあいだに小さな居場所と実験場をつくる有料会員制コミュニティです。"
+    />
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://unpkg.com/react@18/umd/react.development.js"></script>
+    <script src="https://unpkg.com/react-dom@18/umd/react-dom.development.js"></script>
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+    <script>
+      tailwind.config = {
+        theme: {
+          extend: {
+            colors: {
+              ink: "#171717",
+              paper: "#f7f5ef",
+              mist: "#e7ebe6",
+              sea: "#255d63",
+              moss: "#6f7f54",
+              clay: "#b86b4b",
+            },
+            fontFamily: {
+              sans: [
+                "Inter",
+                "ui-sans-serif",
+                "system-ui",
+                "-apple-system",
+                "BlinkMacSystemFont",
+                "Segoe UI",
+                "sans-serif",
+              ],
+            },
+            boxShadow: {
+              soft: "0 18px 60px rgba(23, 23, 23, .12)",
+              glow: "0 18px 80px rgba(37, 93, 99, .2)",
+            },
+          },
+        },
+      };
+    </script>
+    <style>
+      * {
+        box-sizing: border-box;
+      }
+      html {
+        scroll-behavior: smooth;
+      }
+      body {
+        margin: 0;
+        background: #f7f5ef;
+        color: #171717;
+        font-family:
+          Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI",
+          sans-serif;
+      }
+      button,
+      input {
+        font: inherit;
+      }
+      .reveal {
+        animation: reveal 760ms cubic-bezier(0.2, 0.8, 0.2, 1) both;
+      }
+      .float {
+        animation: float 5.5s ease-in-out infinite;
+      }
+      .image-fade {
+        animation: imageFade 620ms ease both;
+      }
+      .hero-shade {
+        background:
+          linear-gradient(180deg, rgba(0, 0, 0, .16) 0%, rgba(0, 0, 0, 0) 28%),
+          linear-gradient(0deg, rgba(247, 245, 239, .98) 0%, rgba(247, 245, 239, .2) 21%, rgba(0, 0, 0, 0) 46%),
+          linear-gradient(90deg, rgba(0, 0, 0, .38) 0%, rgba(0, 0, 0, .16) 36%, rgba(0, 0, 0, 0) 70%);
+      }
+      .hero-copy {
+        text-shadow: 0 2px 26px rgba(0, 0, 0, .32);
+      }
+      .d-logo {
+        display: inline-grid;
+        grid-template-columns: 13px 13px 13px;
+        grid-template-rows: 13px 13px 13px;
+        gap: 4px;
+        width: 47px;
+        height: 47px;
+      }
+      .d-logo span {
+        background: #ff5733;
+      }
+      .d-logo span:nth-child(1) {
+        grid-column: 1;
+        grid-row: 3;
+        border-radius: 999px;
+      }
+      .d-logo span:nth-child(2) {
+        grid-column: 2;
+        grid-row: 2;
+        border-radius: 13px 0 13px 0;
+      }
+      .d-logo span:nth-child(3) {
+        grid-column: 2;
+        grid-row: 3;
+        border-radius: 13px 0 0 0;
+      }
+      .d-logo span:nth-child(4) {
+        grid-column: 3;
+        grid-row: 1;
+      }
+      .d-logo span:nth-child(5) {
+        grid-column: 3;
+        grid-row: 2;
+        border-radius: 0 0 0 13px;
+      }
+      .d-logo span:nth-child(6) {
+        grid-column: 3;
+        grid-row: 3;
+      }
+      @keyframes reveal {
+        from {
+          opacity: 0;
+          transform: translateY(18px);
+        }
+        to {
+          opacity: 1;
+          transform: translateY(0);
+        }
+      }
+      @keyframes float {
+        0%,
+        100% {
+          transform: translateY(0);
+        }
+        50% {
+          transform: translateY(-10px);
+        }
+      }
+      @keyframes imageFade {
+        from {
+          opacity: .65;
+          transform: scale(1.015);
+        }
+        to {
+          opacity: 1;
+          transform: scale(1);
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <div id="root"></div>
+
+    <script type="text/babel">
+      const { useMemo, useState } = React;
+
+      function Icon({ name, className = "" }) {
+        const paths = {
+          arrow: <><path d="M5 12h14" /><path d="m13 6 6 6-6 6" /></>,
+          check: <path d="m5 13 4 4L19 7" />,
+          chevronLeft: <path d="m15 18-6-6 6-6" />,
+          chevronRight: <path d="m9 18 6-6-6-6" />,
+          compass: <><circle cx="12" cy="12" r="9" /><path d="m16 8-2.2 5.8L8 16l2.2-5.8Z" /></>,
+          heart: <path d="M20.8 4.6a5.5 5.5 0 0 0-7.8 0L12 5.6l-1-1a5.5 5.5 0 0 0-7.8 7.8l1 1L12 21l7.8-7.6 1-1a5.5 5.5 0 0 0 0-7.8Z" />,
+          map: <><path d="M9 18 3 21V6l6-3 6 3 6-3v15l-6 3-6-3Z" /><path d="M9 3v15" /><path d="M15 6v15" /></>,
+          message: <><path d="M21 11.5a8.4 8.4 0 0 1-9 8.4 8.5 8.5 0 0 1-4-.9L3 21l1.4-4.4a8.4 8.4 0 1 1 16.6-5.1Z" /></>,
+          sail: <><path d="M22 19H2" /><path d="M4 19c3 2 13 2 16 0" /><path d="M12 3v16" /><path d="M12 3 5 13h7" /><path d="M12 5l6 8h-6" /></>,
+          sparkles: <><path d="M12 3 9.8 9.8 3 12l6.8 2.2L12 21l2.2-6.8L21 12l-6.8-2.2Z" /><path d="M5 3v4" /><path d="M3 5h4" /><path d="M19 17v4" /><path d="M17 19h4" /></>,
+          users: <><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2" /><circle cx="9" cy="7" r="4" /><path d="M22 21v-2a4 4 0 0 0-3-3.87" /><path d="M16 3.13a4 4 0 0 1 0 7.75" /></>,
+          wave: <><path d="M2 12c2.5-3 5-3 7.5 0s5 3 7.5 0 5-3 7.5 0" /><path d="M2 17c2.5-3 5-3 7.5 0s5 3 7.5 0 5-3 7.5 0" /></>,
+        };
+        return (
+          <svg
+            className={className}
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="2"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            aria-hidden="true"
+          >
+            {paths[name] || paths.sparkles}
+          </svg>
+        );
+      }
+
+      const fallbackImages = [
+        "https://images.unsplash.com/photo-1507525428034-b723cf961d3e?auto=format&fit=crop&w=1800&q=85",
+        "https://images.unsplash.com/photo-1500530855697-b586d89ba3ee?auto=format&fit=crop&w=1800&q=85",
+        "https://images.unsplash.com/photo-1470252649378-9c29740c9fa8?auto=format&fit=crop&w=1800&q=85",
+        "https://images.unsplash.com/photo-1444703686981-a3abbc4d4fe3?auto=format&fit=crop&w=1800&q=85",
+      ];
+
+      const scenes = [
+        {
+          title: "西地区の水田",
+          area: "Morning Commons",
+          src: "https://assets.st-note.com/img/1755238178-rf0Ds8nNWJgwRqzXYGjkAtSm.jpg?width=1800",
+          copy: "空が水面に落ちる朝。ここに、もう一つの実家を持つ。",
+        },
+        {
+          title: "保々見の海",
+          area: "Blue Edge",
+          src: "https://assets.st-note.com/img/1755238179-LNzA3UmSr9fGFh4IK7ewlQXM.jpg?width=1800",
+          copy: "青さが、言葉より先に届く。離れていても、帰る先がある。",
+        },
+        {
+          title: "菱浦の夕陽",
+          area: "Golden Hour",
+          src: "https://assets.st-note.com/img/1755239017-VTJlWAXcaBzMI5gsCHiDK1hL.jpg?width=1800",
+          copy: "一日が静かに閉じる。誰かと食卓を囲みたくなる。",
+        },
+        {
+          title: "夜の西地区",
+          area: "Quiet Night",
+          src: "https://assets.st-note.com/img/1755238459-A16EgJH2qWuyNb7Kr8eRTaFI.jpg?width=1800",
+          copy: "都市の速度を離れ、誰かの役に立つ自分を思い出す。",
+        },
+      ];
+
+      const journeys = [
+        { icon: "compass", title: "知る", text: "島の便りと暮らしの温度が、毎月そっと届く。" },
+        { icon: "message", title: "話す", text: "家族でも職場でもない、安心できる第三の会話がある。" },
+        { icon: "sail", title: "行く", text: "宿、移動、会いたい人を相談して、実家のように帰る。" },
+        { icon: "heart", title: "創る", text: "自分のスキルを持ち寄り、誰かの困りごとを一緒に解く。" },
+      ];
+
+      const plans = [
+        {
+          name: "Light",
+          price: "¥11,000",
+          note: "まず島とつながる",
+          detail: "忙しい都市生活の中に、月1回の島時間を差し込む入口。",
+          features: ["限定コミュニティ", "月次レター", "都市部イベント招待"],
+        },
+        {
+          name: "Deep",
+          price: "¥33,000",
+          note: "もう一つの実家を持つ",
+          detail: "老後の孤独を、未来の不安で終わらせない。年に一度帰れる家族のような2ndプレイスを育てる。",
+          features: ["来島コンシェルジュ", "ただいま宿泊優待", "島の家族のような紹介"],
+          hot: true,
+        },
+        {
+          name: "Co-create",
+          price: "¥110,000",
+          note: "スキルを持ち寄り、共助をつくる",
+          detail: "仕事で磨いた力を、同じ目標を持つ仲間のために使う。助け合いが生きがいに変わるプラン。",
+          features: ["共助テーマ相談", "スキル持ち寄り滞在", "実験リトリート"],
+        },
+      ];
+
+      const voices = [
+        {
+          name: "都市で働く40代",
+          text: "親でも会社でもないのに、帰ると名前で迎えてくれる。将来ひとりにならない準備を、明るく始められた。",
+        },
+        {
+          name: "専門職メンバー",
+          text: "自分のスキルが、誰かの一日にちゃんと役立つ。共助はきれいごとではなく、生きがいの設計でした。",
+        },
+        {
+          name: "親子参加メンバー",
+          text: "子どもに見せたいのは観光地ではなく、世代を超えて助け合う小さな家族のような風景でした。",
+        },
+      ];
+
+      function SmartImage({ src, fallback, alt, className }) {
+        const [current, setCurrent] = useState(src);
+        return (
+          <img
+            src={current}
+            alt={alt}
+            className={className}
+            onError={() => {
+              if (current !== fallback) setCurrent(fallback);
+            }}
+          />
+        );
+      }
+
+      function App() {
+        const [activeScene, setActiveScene] = useState(0);
+        const [selectedPlan, setSelectedPlan] = useState("Deep");
+        const [joined, setJoined] = useState(false);
+        const scene = scenes[activeScene];
+        const selected = useMemo(
+          () => plans.find((plan) => plan.name === selectedPlan) || plans[1],
+          [selectedPlan]
+        );
+
+        const nextScene = () => setActiveScene((value) => (value + 1) % scenes.length);
+        const prevScene = () => setActiveScene((value) => (value - 1 + scenes.length) % scenes.length);
+
+        return (
+          <main className="min-h-screen overflow-hidden bg-paper text-ink">
+            <section className="relative min-h-screen overflow-hidden">
+              <SmartImage
+                key={scene.title}
+                src={scene.src}
+                fallback={fallbackImages[activeScene]}
+                alt={scene.title}
+                className="image-fade absolute inset-0 h-full w-full object-cover"
+              />
+              <div className="hero-shade absolute inset-0" />
+
+              <nav className="relative z-10 flex items-center justify-between px-5 py-5 md:px-10">
+                <a href="#" className="flex items-center gap-3 text-white">
+                  <span className="grid h-9 w-9 place-items-center rounded-full border border-white/45 bg-white/18 backdrop-blur">
+                    <Icon name="wave" className="h-4 w-4" />
+                  </span>
+                  <span className="text-sm font-medium tracking-[.08em] hero-copy">awai project</span>
+                </a>
+                <div className="hero-copy hidden items-center gap-7 text-xs font-medium text-white/90 md:flex">
+                  <a href="#story" className="hover:text-white">体験</a>
+                  <a href="#plans" className="hover:text-white">プラン</a>
+                  <a href="#voices" className="hover:text-white">声</a>
+                </div>
+                <button
+                  onClick={() => document.getElementById("plans").scrollIntoView({ behavior: "smooth" })}
+                  className="rounded-full bg-white/95 px-4 py-2 text-sm font-semibold text-black shadow-sm transition hover:bg-white"
+                >
+                  入会する
+                </button>
+              </nav>
+
+              <div className="relative z-10 flex min-h-[calc(100vh-82px)] items-end px-5 pb-14 md:px-10 md:pb-20">
+                <div className="grid w-full gap-8 md:grid-cols-[1fr_380px] md:items-end">
+                  <div className="hero-copy reveal max-w-4xl text-white">
+                    <p className="mb-4 inline-flex items-center gap-2 rounded-full border border-white/40 bg-black/12 px-3 py-1.5 text-xs backdrop-blur-sm">
+                      <Icon name="sparkles" className="h-3.5 w-3.5" />
+                      2ndプレイスは、未来の孤独をやわらげる。
+                    </p>
+                    <h1 className="max-w-3xl text-5xl font-semibold leading-[1.02] tracking-normal md:text-7xl">
+                      あわいに、帰る。
+                    </h1>
+                    <p className="mt-6 max-w-2xl text-base leading-8 text-white/88 md:text-lg">
+                      都市と島、仕事と暮らし、自分と社会。その「あわい」に、家族のように帰れる場所と、助け合う生きがいをつくる有料会員制コミュニティ。
+                    </p>
+                    <div className="mt-8 flex flex-wrap gap-3">
+                      <button
+                        onClick={() => document.getElementById("plans").scrollIntoView({ behavior: "smooth" })}
+                        className="inline-flex items-center gap-2 rounded-full bg-white px-5 py-3 text-sm font-semibold text-black transition hover:scale-[1.02]"
+                      >
+                        メンバーになる <Icon name="arrow" className="h-4 w-4" />
+                      </button>
+                      <button
+                        onClick={() => document.getElementById("story").scrollIntoView({ behavior: "smooth" })}
+                        className="rounded-full border border-white/40 bg-white/10 px-5 py-3 text-sm font-medium text-white backdrop-blur transition hover:bg-white/20"
+                      >
+                        体験を見る
+                      </button>
+                    </div>
+                  </div>
+
+                  <div className="reveal rounded-[8px] border border-white/35 bg-white/20 p-4 text-white shadow-soft backdrop-blur-sm">
+                    <div className="aspect-[4/3] overflow-hidden rounded-[6px] bg-black/20">
+                      <SmartImage
+                        key={`${scene.title}-card`}
+                        src={scene.src}
+                        fallback={fallbackImages[activeScene]}
+                        alt=""
+                        className="h-full w-full object-cover"
+                      />
+                    </div>
+                    <div className="mt-4 flex items-start justify-between gap-4">
+                      <div>
+                        <p className="text-xs uppercase tracking-[.18em] text-white/70">{scene.area}</p>
+                        <p className="mt-1 text-sm font-semibold">{scene.title}</p>
+                        <p className="mt-2 text-xs leading-5 text-white/86">{scene.copy}</p>
+                      </div>
+                      <div className="flex shrink-0 gap-2">
+                        <button
+                          onClick={prevScene}
+                          className="grid h-9 w-9 place-items-center rounded-full bg-white/15 transition hover:bg-white/25"
+                          aria-label="前の画像"
+                        >
+                          <Icon name="chevronLeft" className="h-4 w-4" />
+                        </button>
+                        <button
+                          onClick={nextScene}
+                          className="grid h-9 w-9 place-items-center rounded-full bg-white/15 transition hover:bg-white/25"
+                          aria-label="次の画像"
+                        >
+                          <Icon name="chevronRight" className="h-4 w-4" />
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </section>
+
+            <section id="story" className="px-5 py-20 md:px-10">
+              <div className="mx-auto max-w-6xl">
+                <div className="mb-10 grid gap-5 md:grid-cols-[1fr_.9fr] md:items-end">
+                  <div>
+                    <p className="text-sm text-neutral-500">What you join</p>
+                    <h2 className="mt-2 max-w-2xl text-3xl font-semibold leading-tight md:text-5xl">
+                      もう一つの実家と、もう一つの役割を持つ。
+                    </h2>
+                  </div>
+                  <p className="text-sm leading-7 text-neutral-600">
+                    あわいプロジェクトは、観光でも移住でもありません。家族のように帰れる安心と、スキルを持ち寄って助け合う実感を、少しずつ育てる仕組みです。
+                  </p>
+                </div>
+
+                <div className="grid gap-3 md:grid-cols-4">
+                  {journeys.map((item, index) => (
+                    <article
+                      key={item.title}
+                      className="rounded-[8px] border border-black/10 bg-white p-5 shadow-sm transition hover:-translate-y-1 hover:shadow-soft"
+                    >
+                      <div className="grid h-10 w-10 place-items-center rounded-full bg-mist text-sea">
+                        <Icon name={item.icon} className="h-5 w-5" />
+                      </div>
+                      <p className="mt-6 text-xs text-neutral-400">0{index + 1}</p>
+                      <h3 className="mt-1 text-xl font-semibold">{item.title}</h3>
+                      <p className="mt-3 text-sm leading-7 text-neutral-600">{item.text}</p>
+                    </article>
+                  ))}
+                </div>
+              </div>
+            </section>
+
+            <section className="bg-[#111] px-5 py-20 text-white md:px-10">
+              <div className="mx-auto grid max-w-6xl gap-10 md:grid-cols-[.9fr_1.1fr] md:items-center">
+                <div>
+                  <p className="text-sm text-white/55">Member rhythm</p>
+                  <h2 className="mt-2 text-3xl font-semibold leading-tight md:text-5xl">
+                    毎月、帰れる理由と役に立てる余白が届く。
+                  </h2>
+                  <p className="mt-5 text-sm leading-8 text-white/70">
+                    まずは軽い近況から。やがて、来島、食卓、相談、共助プロジェクトへ。忙しい人でも「ただいま」と「手伝えること」を切らさない設計です。
+                  </p>
+                </div>
+                <div className="grid gap-3">
+                  {[
+                    ["月初", "島の家族から届く近況と、今月の小さな困りごと"],
+                    ["中旬", "オンラインで話す、老後・家族・仕事の外側の居場所"],
+                    ["週末", "都市部メンバーのごはん会と、スキル持ち寄り相談"],
+                    ["来島前", "会いたい人、泊まる場所、手伝えることを一緒に整える"],
+                  ].map(([label, text], index) => (
+                    <div
+                      key={label}
+                      className="flex items-center justify-between gap-4 rounded-[8px] border border-white/10 bg-white/8 p-4"
+                    >
+                      <div>
+                        <p className="text-xs text-white/45">{label}</p>
+                        <p className="mt-1 text-sm leading-6">{text}</p>
+                      </div>
+                      <span className="grid h-9 w-9 shrink-0 place-items-center rounded-full bg-white text-xs font-semibold text-black">
+                        {index + 1}
+                      </span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </section>
+
+            <section id="plans" className="px-5 py-20 md:px-10">
+              <div className="mx-auto max-w-6xl">
+                <div className="mb-10 text-center">
+                  <p className="text-sm text-neutral-500">Plans</p>
+                  <h2 className="mt-2 text-3xl font-semibold leading-tight md:text-5xl">
+                    未来の居場所と、役割の深さで選ぶ。
+                  </h2>
+                </div>
+
+                <div className="grid gap-4 md:grid-cols-3">
+                  {plans.map((plan) => (
+                    <button
+                      key={plan.name}
+                      onClick={() => setSelectedPlan(plan.name)}
+                      className={`relative rounded-[8px] border p-6 text-left transition hover:-translate-y-1 ${
+                        selectedPlan === plan.name
+                          ? "border-black bg-white shadow-soft"
+                          : "border-black/10 bg-white/70 shadow-sm"
+                      }`}
+                    >
+                      {plan.hot && (
+                        <span className="absolute right-5 top-5 rounded-full bg-black px-3 py-1 text-xs text-white">
+                          おすすめ
+                        </span>
+                      )}
+                      <h3 className="text-2xl font-semibold">{plan.name}</h3>
+                      <p className="mt-3 text-sm text-neutral-500">{plan.note}</p>
+                      <p className="mt-6 text-3xl font-semibold">
+                        {plan.price}
+                        <span className="text-sm font-normal text-neutral-500"> / year</span>
+                      </p>
+                      <p className="mt-4 min-h-[48px] text-sm leading-6 text-neutral-600">{plan.detail}</p>
+                      <div className="mt-6 space-y-3">
+                        {plan.features.map((feature) => (
+                          <p key={feature} className="flex items-center gap-2 text-sm text-neutral-700">
+                            <Icon name="check" className="h-4 w-4 text-sea" />
+                            {feature}
+                          </p>
+                        ))}
+                      </div>
+                    </button>
+                  ))}
+                </div>
+
+                <div className="mt-6 rounded-[8px] border border-black/10 bg-white p-5 shadow-sm">
+                  <div className="grid gap-5 md:grid-cols-[1fr_auto] md:items-center">
+                    <div>
+                      <p className="text-sm text-neutral-500">Selected plan</p>
+                      <h3 className="mt-1 text-2xl font-semibold">{selected.name}で、あわいに入る。</h3>
+                      <p className="mt-2 text-sm leading-7 text-neutral-600">
+                        {selected.name === "Deep"
+                          ? "家族のように帰れる場所を持つ体験を、まずは仮入会で感じてください。"
+                          : selected.name === "Co-create"
+                            ? "自分のスキルが誰かの力になる共助の入口を、まずは仮入会で体験できます。"
+                            : "島とのゆるやかな接点を、まずは仮入会で体験できます。"}
+                      </p>
+                    </div>
+                    <button
+                      onClick={() => setJoined(true)}
+                      className="inline-flex items-center justify-center gap-2 rounded-full bg-black px-6 py-4 text-sm font-semibold text-white transition hover:bg-neutral-800"
+                    >
+                      仮入会してみる <Icon name="arrow" className="h-4 w-4" />
+                    </button>
+                  </div>
+                </div>
+              </div>
+            </section>
+
+            <section id="voices" className="px-5 pb-20 md:px-10">
+              <div className="mx-auto max-w-6xl">
+                <div className="mb-8 flex items-end justify-between gap-4">
+                  <div>
+                    <p className="text-sm text-neutral-500">Member voices</p>
+                    <h2 className="mt-2 text-3xl font-semibold md:text-5xl">帰る理由と、助け合う理由。</h2>
+                  </div>
+                </div>
+                <div className="grid gap-4 md:grid-cols-3">
+                  {voices.map((voice) => (
+                    <article key={voice.name} className="rounded-[8px] border border-black/10 bg-white p-6 shadow-sm">
+                      <p className="text-sm leading-7 text-neutral-700">「{voice.text}」</p>
+                      <div className="mt-6 flex items-center gap-3">
+                        <div className="grid h-10 w-10 place-items-center rounded-full bg-sea text-white">
+                          <Icon name="users" className="h-4 w-4" />
+                        </div>
+                        <p className="text-sm font-semibold">{voice.name}</p>
+                      </div>
+                    </article>
+                  ))}
+                </div>
+              </div>
+            </section>
+
+            <footer className="border-t border-black/10 px-5 py-10 md:px-10">
+              <div className="mx-auto flex max-w-6xl flex-col justify-between gap-4 text-sm text-neutral-500 md:flex-row">
+                <div className="flex items-center gap-2">
+                  <span className="font-medium text-ink">awai project</span>
+                  <span>powered by</span>
+                  <span className="d-logo" aria-label=".d logo" role="img">
+                    <span></span>
+                    <span></span>
+                    <span></span>
+                    <span></span>
+                    <span></span>
+                    <span></span>
+                  </span>
+                  <span className="font-semibold text-ink">.d</span>
+                </div>
+                <p>島と都市のあわいに、家族のような共助圏をつくる。</p>
+              </div>
+            </footer>
+
+            {joined && (
+              <div className="fixed inset-0 z-50 grid place-items-center bg-black/45 p-5 backdrop-blur-sm">
+                <div className="w-full max-w-md rounded-[8px] bg-white p-6 shadow-soft">
+                  <div className="grid h-12 w-12 place-items-center rounded-full bg-mist text-sea">
+                    <Icon name="map" className="h-5 w-5" />
+                  </div>
+                  <h3 className="mt-5 text-2xl font-semibold">ようこそ、あわいへ。</h3>
+                  <p className="mt-3 text-sm leading-7 text-neutral-600">
+                    次に届くのは、島の便り、メンバーの自己紹介、そして「あなたが帰りたい理由 / 活かしたいスキル」を聞く小さなフォームです。
+                  </p>
+                  <div className="mt-5 rounded-[8px] bg-neutral-100 p-4">
+                    <p className="flex items-center gap-2 text-sm">
+                      <Icon name="users" className="h-4 w-4" /> 今月の新しい家族 18人
+                    </p>
+                    <p className="mt-2 flex items-center gap-2 text-sm">
+                      <Icon name="sail" className="h-4 w-4" /> 次回のただいま相談枠 6枠
+                    </p>
+                  </div>
+                  <button
+                    onClick={() => setJoined(false)}
+                    className="mt-6 w-full rounded-full bg-black px-5 py-3 text-sm font-semibold text-white"
+                  >
+                    閉じる
+                  </button>
+                </div>
+              </div>
+            )}
+          </main>
+        );
+      }
+
+      ReactDOM.createRoot(document.getElementById("root")).render(<App />);
+    </script>
+  </body>
+</html>

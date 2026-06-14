@@ -1,0 +1,3513 @@
+<!doctype html>
+<html lang="ja">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>.d works - AI Task Board</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://unpkg.com/react@18/umd/react.development.js"></script>
+    <script src="https://unpkg.com/react-dom@18/umd/react-dom.development.js"></script>
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+    <style>
+      * { box-sizing: border-box; }
+      body {
+        margin: 0;
+        background: #f8fafd;
+        color: #202124;
+        font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      }
+      button, input, select { font: inherit; }
+      .lift { transition: transform 160ms ease, box-shadow 160ms ease, border-color 160ms ease; }
+      .lift:hover { transform: translateY(-1px); box-shadow: 0 2px 8px rgba(60, 64, 67, .18); }
+      @media (min-width: 1280px) {
+        .work-layout { grid-template-columns: 280px minmax(0, 1fr) var(--detail-width); }
+        .work-layout.detail-closed { grid-template-columns: 280px minmax(0, 1fr); }
+      }
+    </style>
+  </head>
+  <body>
+    <div id="root"></div>
+
+    <script type="text/babel">
+      const { useState } = React;
+
+      function Icon({ name, className = "" }) {
+        const paths = {
+          alert: <><path d="M12 3 22 20H2L12 3Z" /><path d="M12 9v5" /><path d="M12 17h.01" /></>,
+          archive: <><path d="M3 7h18" /><path d="M5 7v13h14V7" /><path d="M9 11h6" /><path d="M4 4h16v3H4z" /></>,
+          bot: <><path d="M12 8V4" /><rect x="5" y="8" width="14" height="10" rx="3" /><path d="M9 13h.01" /><path d="M15 13h.01" /></>,
+          calendar: <><rect x="3" y="4" width="18" height="18" rx="2" /><path d="M16 2v4" /><path d="M8 2v4" /><path d="M3 10h18" /></>,
+          check: <path d="m5 13 4 4L19 7" />,
+          clock: <><circle cx="12" cy="12" r="9" /><path d="M12 7v5h4" /></>,
+          file: <><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8Z" /><path d="M14 2v6h6" /></>,
+          filter: <path d="M3 5h18l-7 8v5l-4 2v-7Z" />,
+          heart: <path d="M20.8 4.6a5.5 5.5 0 0 0-7.8 0L12 5.6l-1-1a5.5 5.5 0 0 0-7.8 7.8l1 1L12 21l7.8-7.6 1-1a5.5 5.5 0 0 0 0-7.8Z" />,
+          history: <><path d="M3 12a9 9 0 1 0 3-6.7" /><path d="M3 4v5h5" /><path d="M12 7v5l3 2" /></>,
+          list: <><path d="M8 6h13" /><path d="M8 12h13" /><path d="M8 18h13" /><path d="M3 6h.01" /><path d="M3 12h.01" /><path d="M3 18h.01" /></>,
+          lock: <><rect x="5" y="11" width="14" height="10" rx="2" /><path d="M8 11V8a4 4 0 0 1 8 0v3" /></>,
+          message: <path d="M21 11.5a8.4 8.4 0 0 1-9 8.4 8.5 8.5 0 0 1-4-.9L3 21l1.4-4.4a8.4 8.4 0 1 1 16.6-5.1Z" />,
+          panel: <><rect x="3" y="4" width="18" height="16" rx="2" /><path d="M15 4v16" /><path d="m10 9-3 3 3 3" /></>,
+          pause: <><circle cx="12" cy="12" r="9" /><path d="M10 9v6" /><path d="M14 9v6" /></>,
+          play: <path d="M8 5v14l11-7Z" />,
+          plus: <><path d="M12 5v14" /><path d="M5 12h14" /></>,
+          refresh: <><path d="M21 12a9 9 0 0 1-15 6.7" /><path d="M3 12A9 9 0 0 1 18 5.3" /><path d="M18 2v4h-4" /><path d="M6 22v-4h4" /></>,
+          search: <><circle cx="11" cy="11" r="7" /><path d="m16 16 5 5" /></>,
+          shield: <><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10Z" /><path d="m9 12 2 2 4-5" /></>,
+          shop: <><path d="M6 8h12l1 13H5L6 8Z" /><path d="M9 8a3 3 0 0 1 6 0" /></>,
+          map: <><path d="m3 6 6-3 6 3 6-3v15l-6 3-6-3-6 3Z" /><path d="M9 3v15" /><path d="M15 6v15" /></>,
+          star: <path d="m12 2 3 6 6.5.9-4.7 4.6 1.1 6.5L12 17l-5.9 3 1.1-6.5L2.5 8.9 9 8Z" />,
+          timeline: <><path d="M3 5h18" /><path d="M3 12h18" /><path d="M3 19h18" /><path d="M8 5v14" /><path d="M16 5v14" /></>,
+          user: <><circle cx="12" cy="8" r="4" /><path d="M4 21a8 8 0 0 1 16 0" /></>,
+          users: <><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2" /><circle cx="9" cy="7" r="4" /><path d="M22 21v-2a4 4 0 0 0-3-3.9" /><path d="M16 3.1a4 4 0 0 1 0 7.8" /></>,
+        };
+        return (
+          <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+            {paths[name] || paths.check}
+          </svg>
+        );
+      }
+
+      function DWorksLogo({ className = "" }) {
+        return (
+          <svg className={className} viewBox="0 0 720 720" fill="none" aria-label=".d works logo" role="img">
+            <g fill="#f9633d">
+              <circle cx="112" cy="568" r="92" />
+              <path d="M245 455H362C414 455 456 497 456 549V666C339.5 666 245 571.5 245 455Z" />
+              <path d="M245 426C245 309.5 339.5 215 456 215V332C456 384 414 426 362 426H245Z" />
+              <path d="M486 25H668V206H486V25Z" />
+              <path d="M486 455H668V666H486V455Z" />
+              <path d="M486 245H668V426H580C528 426 486 384 486 332V245Z" />
+            </g>
+          </svg>
+        );
+      }
+
+      const now = new Date("2026-06-01T02:30:00.000Z");
+
+      const members = [
+        { id: "entaka", name: "Entaka", role: "事業責任者", image: "assets/avatar-entaka.jpg" },
+        { id: "mizuki", name: "Mizuki", role: "店舗運営", image: "assets/avatar-mizuki.png" },
+        { id: "akiko", name: "Akiko", role: "SNS/PR", image: "assets/avatar-akiko.png" },
+        { id: "daisuke", name: "Daisuke", role: "財務・法務", image: "assets/avatar-daisuke.png" },
+        { id: "ken", name: "Ken", role: "AI/自動化", image: "assets/avatar-ken.png" },
+      ];
+
+      const statusMeta = {
+        "needs-ai": { label: "AI実行待ち", tone: "bg-[#e8f0fe] text-[#1967d2] border-[#d2e3fc]", icon: "bot", accent: "border-l-[#1a73e8]" },
+        "needs-human": { label: "人間実行待ち", tone: "bg-[#fef7e0] text-[#b06000] border-[#feefc3]", icon: "user", accent: "border-l-[#fbbc04]" },
+        "in-progress": { label: "処理中", tone: "bg-[#e6f4ea] text-[#137333] border-[#ceead6]", icon: "play", accent: "border-l-[#34a853]" },
+        reviewing: { label: "レビュー中", tone: "bg-[#f3e8fd] text-[#8430ce] border-[#e9d2fd]", icon: "search", accent: "border-l-[#a142f4]" },
+        done: { label: "完了", tone: "bg-[#f1f3f4] text-[#5f6368] border-[#e8eaed]", icon: "check", accent: "border-l-[#9aa0a6]" },
+        blocked: { label: "停滞中", tone: "bg-[#fce8e6] text-[#c5221f] border-[#fad2cf]", icon: "pause", accent: "border-l-[#ea4335]" },
+      };
+
+      const priorityMeta = {
+        P0: { label: "即時", tone: "bg-[#fce8e6] text-[#c5221f]" },
+        P1: { label: "本日", tone: "bg-[#fef7e0] text-[#b06000]" },
+        P2: { label: "今週", tone: "bg-[#e8f0fe] text-[#1967d2]" },
+        P3: { label: "任意", tone: "bg-[#f1f3f4] text-[#5f6368]" },
+      };
+
+      const ownerMeta = {
+        human: "Human",
+        "ai-batch": "Claude Code",
+        "ai-interactive": "Cowork",
+      };
+
+      const actionLabels = {
+        content: "コンテンツ",
+        research: "調査",
+        review: "レビュー",
+        publish: "公開",
+        setup: "設定",
+        other: "その他",
+      };
+
+      const helpRequests = [
+        {
+          id: "H001",
+          taskId: "T0002",
+          requester: "mizuki",
+          title: "火曜・木曜営業の店頭ヘルプ",
+          note: "開店準備、接客、閉店後の売上記録を一緒に確認してほしい。",
+          deadline: "6/4",
+          remaining: 2,
+          tags: ["店舗運営", "現場"],
+        },
+        {
+          id: "H002",
+          taskId: "T0009",
+          requester: "akiko",
+          title: "Instagram投稿の言葉レビュー",
+          note: "あわいらしい表現と来店導線が入っているか見てほしい。",
+          deadline: "6/5",
+          remaining: 1,
+          tags: ["SNS", "レビュー"],
+        },
+        {
+          id: "H003",
+          taskId: "T0004",
+          requester: "daisuke",
+          title: "10万円予算の原価入力",
+          note: "家賃、仕入れ原価、備品費の実数を集めて表に入れてほしい。",
+          deadline: "6/3",
+          remaining: 1,
+          tags: ["財務", "予算"],
+        },
+        {
+          id: "H004",
+          taskId: "T0007",
+          requester: "entaka",
+          title: "初期顧客ヒアリング同行",
+          note: "高校生、移住者、子育て世代への聞き取り候補を一緒に探したい。",
+          deadline: "6/6",
+          remaining: 3,
+          tags: ["顧客調査", "営業"],
+        },
+        {
+          id: "H005",
+          taskId: "T0005",
+          requester: "mizuki",
+          title: "リメイク協力者の紹介",
+          note: "縫製、修繕、ワークショップに協力できる人を紹介してほしい。",
+          deadline: "6/7",
+          remaining: 2,
+          tags: ["協業開拓", "商品企画"],
+        },
+        {
+          id: "H006",
+          taskId: "T0008",
+          requester: "akiko",
+          title: "島外PRの掲載先候補探し",
+          note: "地域メディア、移住関心層、サステナブル文脈の媒体を集めたい。",
+          deadline: "6/8",
+          remaining: 2,
+          tags: ["PR", "メディア"],
+        },
+      ];
+
+      const seedTasks = [
+        {
+          id: "T0001",
+          title: "あわいの90日事業計画を1枚に整理する",
+          status: "needs-ai",
+          owner: "ai-batch",
+          priority: "P1",
+          action_type: "research",
+          handoff_note: "人間がnote記事と現状メモを共有済み。次はClaude Codeが3月末までの挑戦、火木営業、10万円予算、古着販売と居場所づくりの論点を1枚の事業計画に整理する。理由は関係者が同じ優先順位で動けるようにするため。",
+          blocked_reason: null,
+          assignees: ["entaka", "daisuke", "ken"],
+          comments_count: 6,
+          thanks_count: 11,
+          comments: [
+            { author: "entaka", timestamp: "6/1 09:20", body: "事業計画は、売上より先に『誰が何に困って来店するのか』を明確にしたいです。" },
+            { author: "daisuke", timestamp: "6/1 09:42", body: "10万円予算の使途は、初期費用と毎月発生する費用を分けて見せると判断しやすいです。" },
+            { author: "ken", timestamp: "6/1 10:05", body: "note本文から、営業日・予算・居場所づくりの3点を抜き出して整理します。" },
+          ],
+          tags: ["戦略", "調査", "マーケティング"],
+          created_at: "2026-05-31T23:20:00.000Z",
+          updated_at: "2026-06-01T00:10:00.000Z",
+          activity: [
+            { timestamp: "2026-05-31T23:20:00.000Z", actor: "human", action: "ワークを作成" },
+            { timestamp: "2026-06-01T00:10:00.000Z", actor: "human", action: "note参照URLを追加" },
+          ],
+        },
+        {
+          id: "T0002",
+          title: "火曜・木曜営業の店舗オペレーション表を作る",
+          status: "needs-human",
+          owner: "human",
+          priority: "P0",
+          action_type: "setup",
+          handoff_note: "Coworkが開店準備、接客、在庫整理、売上記録、閉店作業の草案を作成済み。次は現地メンバーが実際の動線と人員で無理がないか確認する。理由は小さな店舗では属人化が即座に営業停止リスクになるため。",
+          blocked_reason: null,
+          assignees: ["mizuki", "entaka", "ken"],
+          comments_count: 9,
+          thanks_count: 8,
+          comments: [
+            { author: "mizuki", timestamp: "6/1 10:30", body: "開店前の在庫整理と値札付けの担当を明記したいです。当日迷うと開店が遅れます。" },
+            { author: "entaka", timestamp: "6/1 10:48", body: "閉店後の売上記録は、紙とスプレッドシートのどちらを正にするか決めましょう。" },
+            { author: "ken", timestamp: "6/1 11:00", body: "チェックリスト形式に変換できます。抜け漏れ検知もしやすくなります。" },
+          ],
+          tags: ["店舗運営", "業務設計", "現場管理"],
+          created_at: "2026-05-31T01:30:00.000Z",
+          updated_at: "2026-06-01T01:55:00.000Z",
+          activity: [{ timestamp: "2026-05-31T01:30:00.000Z", actor: "ai-interactive", action: "営業オペレーション草案を作成" }],
+        },
+        {
+          id: "T0003",
+          title: "委託・寄付・買取の受け入れルールを法務確認する",
+          status: "needs-ai",
+          owner: "ai-batch",
+          priority: "P0",
+          action_type: "review",
+          handoff_note: "人間が古着の集め方を未確定のまま運用しそうな状態。次はClaude Codeが古物営業、委託販売、寄付受領、返品、個人情報の確認ポイントを洗い出す。理由は善意のプロジェクトでも販売形態を誤ると信用毀損と法務リスクが発生するため。",
+          blocked_reason: null,
+          assignees: ["daisuke", "entaka", "ken"],
+          comments_count: 4,
+          thanks_count: 5,
+          comments: [
+            { author: "daisuke", timestamp: "6/1 08:50", body: "寄付、買取、委託販売は法的な扱いが違うので、まず受け入れパターンを分けます。" },
+            { author: "entaka", timestamp: "6/1 09:05", body: "お客さんに説明するための短いルール文も必要です。店頭掲示まで想定したいです。" },
+          ],
+          tags: ["法務", "リスク管理", "在庫管理"],
+          created_at: "2026-05-30T23:20:00.000Z",
+          updated_at: "2026-05-30T23:20:00.000Z",
+          activity: [{ timestamp: "2026-05-30T23:20:00.000Z", actor: "human", action: "法務確認ワークを作成" }],
+        },
+        {
+          id: "T0004",
+          title: "10万円予算の資金繰り表と損益分岐点を作る",
+          status: "blocked",
+          owner: "human",
+          priority: "P0",
+          action_type: "research",
+          handoff_note: "Claude Codeが備品、家賃、材料費、PR費、売上目標の項目を整理済み。次は人間が実際の家賃、仕入れ原価、販売単価、初期備品費を入力する。理由は10万円の範囲で続けるには、感覚ではなく月次の現金残高で判断する必要があるため。",
+          blocked_reason: "家賃・仕入れ原価・平均販売単価が未入力",
+          assignees: ["daisuke", "entaka"],
+          comments_count: 12,
+          thanks_count: 3,
+          comments: [
+            { author: "daisuke", timestamp: "5/31 18:10", body: "売上目標は商品単価と販売点数に分解します。月次で赤字幅が見える形にします。" },
+            { author: "entaka", timestamp: "5/31 18:22", body: "家賃と備品費の確定値がまだありません。ここが埋まらないと判断できません。" },
+            { author: "daisuke", timestamp: "6/1 08:30", body: "入力待ち項目を赤字で残して、blockedの理由と一致させます。" },
+          ],
+          tags: ["財務", "予算管理", "事業管理"],
+          created_at: "2026-05-28T06:00:00.000Z",
+          updated_at: "2026-05-28T06:00:00.000Z",
+          activity: [{ timestamp: "2026-05-28T06:00:00.000Z", actor: "ai-batch", action: "予算項目を洗い出し" }],
+        },
+        {
+          id: "T0005",
+          title: "島内の協力者・リメイク作家候補リストを作る",
+          status: "in-progress",
+          owner: "ai-interactive",
+          priority: "P2",
+          action_type: "research",
+          handoff_note: "人間がリメイクや修繕を商品価値にしたい方向性を共有済み。次はCoworkが島内外の縫製経験者、クリエイター、ワークショップ協力者を候補化する。理由は古着店を単なる販売所ではなく、手を加えて価値を生む場所にするため。",
+          blocked_reason: null,
+          assignees: ["mizuki", "akiko", "entaka", "ken"],
+          comments_count: 7,
+          thanks_count: 14,
+          tags: ["協業開拓", "商品企画", "コミュニティ"],
+          created_at: "2026-06-01T01:00:00.000Z",
+          updated_at: "2026-06-01T02:05:00.000Z",
+          activity: [{ timestamp: "2026-06-01T02:05:00.000Z", actor: "ai-interactive", action: "候補者リスト作成を開始" }],
+        },
+        {
+          id: "T0006",
+          title: "Instagram投稿カレンダーを2週間分作る",
+          status: "needs-ai",
+          owner: "ai-batch",
+          priority: "P1",
+          action_type: "content",
+          handoff_note: "人間が店舗の世界観を『服を売る場所』ではなく『人と服があわいで出会う場所』と定義済み。次はClaude Codeが商品紹介、営業日告知、店主の想い、来店者ストーリー、リメイク過程の投稿案を2週間分作る。理由はSNSを単発告知ではなく来店理由の蓄積にするため。",
+          blocked_reason: null,
+          assignees: ["akiko", "mizuki", "ken"],
+          comments_count: 5,
+          thanks_count: 18,
+          tags: ["SNS", "マーケティング", "コンテンツ"],
+          created_at: "2026-06-01T00:40:00.000Z",
+          updated_at: "2026-06-01T00:50:00.000Z",
+          activity: [{ timestamp: "2026-06-01T00:40:00.000Z", actor: "human", action: "SNS運用ワークを作成" }],
+        },
+        {
+          id: "T0007",
+          title: "海士町内の初期顧客ヒアリングを設計する",
+          status: "needs-human",
+          owner: "human",
+          priority: "P1",
+          action_type: "research",
+          handoff_note: "Coworkが高校生、子育て世代、移住者、観光客、地域事業者の5セグメントを仮説化済み。次は人間が各3名ずつヒアリング候補を選ぶ。理由は仕入れや価格を店側の思い込みではなく、実際に買う人の困りごとから決めるため。",
+          blocked_reason: null,
+          assignees: ["entaka", "mizuki", "akiko"],
+          comments_count: 10,
+          thanks_count: 7,
+          tags: ["顧客調査", "営業", "地域連携"],
+          created_at: "2026-05-31T06:15:00.000Z",
+          updated_at: "2026-06-01T01:10:00.000Z",
+          activity: [{ timestamp: "2026-05-31T06:15:00.000Z", actor: "ai-interactive", action: "顧客セグメント仮説を作成" }],
+        },
+        {
+          id: "T0008",
+          title: "島外PR向けプレスリリース初稿を作る",
+          status: "needs-ai",
+          owner: "ai-batch",
+          priority: "P2",
+          action_type: "publish",
+          handoff_note: "人間がAmanowaDAOの新規事業としての背景と、海士町で洋服店を始める意義を共有済み。次はClaude Codeが地域メディア、移住関心層、サステナブル文脈に刺さるプレスリリース初稿を作る。",
+          blocked_reason: null,
+          assignees: ["akiko", "entaka", "ken"],
+          comments_count: 3,
+          thanks_count: 9,
+          tags: ["PR", "メディア", "ブランド"],
+          created_at: "2026-05-31T22:00:00.000Z",
+          updated_at: "2026-05-31T23:00:00.000Z",
+          activity: [{ timestamp: "2026-05-31T22:00:00.000Z", actor: "human", action: "PRワークを作成" }],
+        },
+        {
+          id: "T0009",
+          title: "Instagram投稿案の表現と来店導線をレビューする",
+          status: "reviewing",
+          owner: "human",
+          priority: "P1",
+          action_type: "review",
+          handoff_note: "Kenが2週間分の投稿案を作成済み。次はAkikoが、あわいの世界観に合う言葉になっているか、営業日・場所・来店理由が分かるかを確認する。理由はSNS投稿が雰囲気だけで終わると、実際の来店や協力者獲得につながらないため。",
+          blocked_reason: null,
+          assignees: ["akiko", "mizuki", "entaka"],
+          comments_count: 8,
+          thanks_count: 12,
+          comments: [
+            { author: "akiko", timestamp: "6/1 12:15", body: "商品紹介だけでなく、火曜・木曜に来る理由が伝わる投稿にしたいです。" },
+            { author: "mizuki", timestamp: "6/1 12:24", body: "店頭で話している雰囲気に近い言葉だと、あわいらしさが出ると思います。" },
+            { author: "entaka", timestamp: "6/1 12:40", body: "投稿末尾に営業日と場所を毎回入れるか確認してください。" },
+          ],
+          tags: ["SNS", "レビュー", "来店導線"],
+          created_at: "2026-06-01T01:20:00.000Z",
+          updated_at: "2026-06-01T02:15:00.000Z",
+          activity: [
+            { timestamp: "2026-06-01T01:20:00.000Z", actor: "ai-batch", action: "Instagram投稿案を作成" },
+            { timestamp: "2026-06-01T02:15:00.000Z", actor: "human", action: "レビュー中へ移動" },
+          ],
+        },
+        {
+          id: "T0010",
+          title: "営業オペレーション表の抜け漏れをレビューする",
+          status: "reviewing",
+          owner: "human",
+          priority: "P2",
+          action_type: "review",
+          handoff_note: "Mizukiが火曜・木曜営業の開店から閉店までの手順を整理済み。次はDaisukeが、売上記録、現金管理、委託品の扱い、返品時の記録が入っているかを確認する。理由は店舗運営のミスが財務・法務リスクに直結するため。",
+          blocked_reason: null,
+          assignees: ["daisuke", "mizuki", "entaka"],
+          comments_count: 6,
+          thanks_count: 6,
+          comments: [
+            { author: "daisuke", timestamp: "6/1 11:30", body: "委託品と買い取り品の記録欄を分けてください。売上計上の扱いが変わります。" },
+            { author: "mizuki", timestamp: "6/1 11:50", body: "閉店後の確認項目に、現金残高と在庫戻しを追加します。" },
+          ],
+          tags: ["店舗運営", "レビュー", "財務"],
+          created_at: "2026-06-01T00:30:00.000Z",
+          updated_at: "2026-06-01T01:45:00.000Z",
+          activity: [
+            { timestamp: "2026-06-01T00:30:00.000Z", actor: "human", action: "営業手順の初稿を共有" },
+            { timestamp: "2026-06-01T01:45:00.000Z", actor: "human", action: "財務観点のレビューを開始" },
+          ],
+        },
+      ];
+
+      const stampPointSet = [100, 90, 80, 75, 70, 65, 60, 55, 50, 50, 45, 45, 40, 40, 35, 30, 25, 25, 15, 5];
+
+      const shopCatalog = {
+        skills: [
+          {
+            id: "skill-bizdev-01",
+            type: "skills",
+            name: "地域BizDevスプリント",
+            subtitle: "事業開発 / アライアンス / 資金調達壁打ち",
+            provider: "Ryo Kobayashi",
+            avatar: "assets/skills/ryo-kobayashi.png",
+            price: 20000,
+            unit: "1カ月",
+            capacity: "週3時間",
+            experience: "新規事業・自治体連携 8年",
+            location: "オンライン + 月1現地",
+            rating: 4.9,
+            likes: 128,
+            reviews: 24,
+            response: "平均12時間以内",
+            verified: "公開プロフィール項目",
+            fit: 96,
+            tags: ["事業開発", "地域連携", "収益設計"],
+            review: "論点を1枚に圧縮して、翌週の商談に使える形まで落としてくれた。",
+            detail: [
+              "自治体・民間・住民の利害を整理し、初回提案書の骨子まで作成。",
+              "過去職務: スタートアップ事業開発、地域共創プログラム、法人提携。",
+              "納品物: 事業仮説、提携先リスト、初回提案メール、週次レビュー。",
+            ],
+          },
+          {
+            id: "skill-legal-01",
+            type: "skills",
+            name: "古物・委託販売チェック",
+            subtitle: "法務 / 古物営業 / 個人情報",
+            provider: "Akiko Senda",
+            avatar: "assets/skills/akiko-senda.png",
+            price: 30000,
+            unit: "2週間",
+            capacity: "週2時間",
+            experience: "小売法務・契約レビュー 11年",
+            location: "オンライン",
+            rating: 4.8,
+            likes: 91,
+            reviews: 19,
+            response: "平均6時間以内",
+            verified: "法人契約可",
+            fit: 92,
+            tags: ["法務", "リスク管理", "店舗運営"],
+            review: "寄付・買取・委託の違いが一目で分かる運用ルールになった。",
+            detail: [
+              "受け入れ形態別に、契約・表示・返品・個人情報の確認項目を整理。",
+              "過去職務: 小売チェーン法務、利用規約改定、委託契約レビュー。",
+              "納品物: リスク一覧、店頭説明文、チェックリスト、契約条項メモ。",
+            ],
+          },
+          {
+            id: "skill-pr-01",
+            type: "skills",
+            name: "島外PR編集パートナー",
+            subtitle: "PR / メディアリレーション / SNS編集",
+            provider: "Ken Takeda",
+            avatar: "assets/skills/ken-takeda.png",
+            price: 18000,
+            unit: "1カ月",
+            capacity: "週4時間",
+            experience: "ブランドPR・編集 7年",
+            location: "オンライン",
+            rating: 4.7,
+            likes: 76,
+            reviews: 16,
+            response: "平均1日以内",
+            verified: "ポートフォリオ確認済み",
+            fit: 88,
+            tags: ["広報", "SNS", "ブランド"],
+            review: "地域のよさを盛りすぎず、来店理由に変換してくれた。",
+            detail: [
+              "プレスリリース、Instagram投稿、取材候補媒体の編集を支援。",
+              "過去職務: D2CブランドPR、地域メディア編集、SNS運用。",
+              "納品物: 投稿案、媒体リスト、取材ピッチ文、表現レビュー。",
+            ],
+          },
+          {
+            id: "skill-ops-01",
+            type: "skills",
+            name: "火木営業オペレーション設計",
+            subtitle: "店舗運営 / 現場導線 / マニュアル",
+            provider: "Yuki Matsuda",
+            avatar: "assets/skills/yuki-matsuda.png",
+            price: 15000,
+            unit: "3週間",
+            capacity: "週5時間",
+            experience: "小規模店舗運営 5年",
+            location: "海士町 + オンライン",
+            rating: 4.9,
+            likes: 142,
+            reviews: 31,
+            response: "平均8時間以内",
+            verified: "現地参加可",
+            fit: 94,
+            tags: ["店舗運営", "現場管理", "接客"],
+            review: "人が入れ替わっても回るチェックリストに変わった。",
+            detail: [
+              "開店準備、接客、在庫、売上記録、閉店作業の手順を現場で検証。",
+              "過去職務: 直営店スタッフ育成、棚卸し改善、販売導線づくり。",
+              "納品物: 営業手順書、役割分担表、当日チェックリスト。",
+            ],
+          },
+          {
+            id: "skill-finance-01",
+            type: "skills",
+            name: "10万円予算・損益モデル",
+            subtitle: "財務 / 原価管理 / 月次資金繰り",
+            provider: "Marcus Johnson",
+            avatar: "assets/skills/marcus-johnson.png",
+            price: 22000,
+            unit: "10日",
+            capacity: "週3時間",
+            experience: "管理会計・自動化 9年",
+            location: "オンライン",
+            rating: 4.6,
+            likes: 63,
+            reviews: 12,
+            response: "平均4時間以内",
+            verified: "NDA対応可",
+            fit: 86,
+            tags: ["財務", "予算管理", "自動化"],
+            review: "売上点数と単価を変えるだけで、赤字ラインが見えるようになった。",
+            detail: [
+              "初期費用、固定費、原価、売上単価を分解し、資金ショートを予測。",
+              "過去職務: SaaS管理会計、スプレッドシート自動化、KPI設計。",
+              "納品物: 損益分岐テンプレート、入力項目表、月次レビュー観点。",
+            ],
+          },
+        ],
+        commons: [
+          {
+            id: "commons-track-01",
+            type: "commons",
+            name: "海士町陸上競技場",
+            subtitle: "屋外イベント / 体験会 / 大人数ワーク",
+            provider: "海士町スポーツ振興",
+            avatar: "assets/avatar-mizuki.png",
+            price: 30000,
+            unit: "1時間",
+            capacity: "最大200人",
+            location: "島根県隠岐郡海士町",
+            rating: 4.8,
+            likes: 84,
+            reviews: 18,
+            response: "承認目安 1日",
+            verified: "公共施設",
+            fit: 91,
+            tags: ["スポーツ施設", "屋外", "地域イベント"],
+            review: "地域説明会と体験コンテンツを同日に実施できた。",
+            detail: [
+              "利用用途: 地域イベント、運動会、撮影、ワークショップ受付。",
+              "設備: トラック、芝生、控室、簡易音響、駐車場。",
+              "注意: 雨天時の代替案、音量制限、原状復帰が必要。",
+            ],
+          },
+          {
+            id: "commons-library-01",
+            type: "commons",
+            name: "菱浦港まちの図書館ミーティング室",
+            subtitle: "会議 / ヒアリング / 勉強会",
+            provider: "まちの図書館",
+            avatar: "assets/avatar-akiko.png",
+            price: 3000,
+            unit: "1時間",
+            capacity: "12人",
+            location: "菱浦港 徒歩3分",
+            rating: 4.9,
+            likes: 116,
+            reviews: 27,
+            response: "即時予約",
+            verified: "Wi-Fiあり",
+            fit: 95,
+            tags: ["図書館", "会議", "公共"],
+            review: "高校生ヒアリングの心理的ハードルが下がった。",
+            detail: [
+              "利用用途: 顧客ヒアリング、読書会、編集会議、オンラインMTG。",
+              "設備: Wi-Fi、電源、ホワイトボード、プロジェクター、飲食可。",
+              "注意: 静音エリア隣接。撤収時間込みで予約。",
+            ],
+          },
+          {
+            id: "commons-vacant-01",
+            type: "commons",
+            name: "空き家アトリエ 風待ち",
+            subtitle: "リメイク作業 / 撮影 / 小規模販売",
+            provider: "個人ホスト",
+            avatar: "assets/avatar-entaka.jpg",
+            price: 12000,
+            unit: "半日",
+            capacity: "8人",
+            location: "海士町集落内",
+            rating: 4.6,
+            likes: 58,
+            reviews: 11,
+            response: "承認目安 12時間",
+            verified: "民家貸出",
+            fit: 89,
+            tags: ["空き家", "制作", "撮影"],
+            review: "古着の撮影と縫製相談を同じ場所で進められた。",
+            detail: [
+              "利用用途: リメイク制作、商品撮影、試着会、少人数MTG。",
+              "設備: 作業机、自然光、ミシン持込可、駐車1台。",
+              "注意: 住宅地のため夜間利用と大音量は不可。",
+            ],
+          },
+          {
+            id: "commons-field-01",
+            type: "commons",
+            name: "共有畑と堆肥小屋",
+            subtitle: "素材調達 / 土のワーク / 地域体験",
+            provider: "集落共用地",
+            avatar: "assets/avatar-daisuke.png",
+            price: 8000,
+            unit: "1日",
+            capacity: "15人",
+            location: "海士町内農地",
+            rating: 4.5,
+            likes: 49,
+            reviews: 9,
+            response: "承認目安 2日",
+            verified: "自然資源",
+            fit: 82,
+            tags: ["農地", "素材", "体験"],
+            review: "服の染め直し企画に使う植物素材を現地で学べた。",
+            detail: [
+              "利用用途: 染料素材の探索、農作業体験、地域学習。",
+              "設備: 水場、道具置き場、休憩小屋、軽トラック相談可。",
+              "注意: 天候、獣害対策、収穫物の扱いを事前確認。",
+            ],
+          },
+          {
+            id: "commons-office-01",
+            type: "commons",
+            name: "港前シェアオフィス 6席",
+            subtitle: "集中作業 / オンライン商談 / 経理入力",
+            provider: "民間シェアオフィス",
+            avatar: "assets/avatar-ken.png",
+            price: 1500,
+            unit: "1時間",
+            capacity: "6人",
+            location: "港徒歩1分",
+            rating: 4.7,
+            likes: 72,
+            reviews: 14,
+            response: "即時予約",
+            verified: "法人請求可",
+            fit: 87,
+            tags: ["シェアオフィス", "作業", "商談"],
+            review: "オンライン面談と資料作成を途切れず進められた。",
+            detail: [
+              "利用用途: 資料作成、採用面談、オンライン商談、経理入力。",
+              "設備: 高速Wi-Fi、モニター、電源、会議ブース、複合機。",
+              "注意: 通話ブースは2席。長時間利用は事前予約推奨。",
+            ],
+          },
+        ],
+        stamps: [
+          {
+            id: "stamp-thanks-01",
+            type: "stamps",
+            name: "感謝ブーストパック",
+            subtitle: "レビュー・完了報告に使う20個のEmote",
+            provider: ".d works",
+            avatar: "assets/avatar-entaka.jpg",
+            price: 1000,
+            unit: "1,000Point",
+            capacity: "20個",
+            location: "チーム全体で利用可",
+            rating: 4.9,
+            likes: 210,
+            reviews: 42,
+            response: "即時反映",
+            verified: "1Point=1円",
+            fit: 100,
+            tags: ["感謝", "レビュー", "士気"],
+            review: "小さな貢献も見えるので、手伝いが増えた。",
+            icons: ["👏", "🙏", "🙌", "👍", "💐", "✨", "💛", "🏅", "☕", "🔥", "💡", "🌱", "🤝", "🎉", "📣", "🧭", "🫶", "✅", "🌟", "💬"],
+            detail: ["1パック20個、合計1,000Point。数字が大きいほど強い感謝を表します。", "送信すると選択中ワークの感謝Pointに加算されます。"],
+          },
+          {
+            id: "stamp-field-01",
+            type: "stamps",
+            name: "現場応援パック",
+            subtitle: "店頭・イベント・地域作業向けEmote",
+            provider: ".d works",
+            avatar: "assets/avatar-mizuki.png",
+            price: 1000,
+            unit: "1,000Point",
+            capacity: "20個",
+            location: "チーム全体で利用可",
+            rating: 4.8,
+            likes: 184,
+            reviews: 33,
+            response: "即時反映",
+            verified: "1Point=1円",
+            fit: 97,
+            tags: ["現場", "店舗", "イベント"],
+            review: "店舗ヘルプのありがとうが具体的に伝わる。",
+            icons: ["🧺", "🧹", "🪡", "🧵", "👕", "🏃", "📦", "🧾", "🛠️", "🌞", "🏡", "🪑", "📍", "🚩", "🔦", "🧤", "🗒️", "💪", "🏁", "🧡"],
+            detail: ["現場での小さな作業、準備、片付け、接客の貢献を可視化します。", "各EmoteのPoint合計は1,000Pointです。"],
+          },
+          {
+            id: "stamp-creative-01",
+            type: "stamps",
+            name: "クリエイティブ称賛パック",
+            subtitle: "PR・SNS・企画レビュー向けEmote",
+            provider: ".d works",
+            avatar: "assets/avatar-akiko.png",
+            price: 1000,
+            unit: "1,000Point",
+            capacity: "20個",
+            location: "チーム全体で利用可",
+            rating: 4.7,
+            likes: 132,
+            reviews: 26,
+            response: "即時反映",
+            verified: "1Point=1円",
+            fit: 93,
+            tags: ["広報", "SNS", "企画"],
+            review: "レビューが堅くなりすぎず、よい表現を残しやすい。",
+            icons: ["🎨", "📝", "📸", "🎬", "📰", "🗣️", "💎", "🔍", "🎯", "📚", "🖊️", "🌈", "🪄", "📌", "🧠", "📈", "💫", "✍️", "🧩", "💜"],
+            detail: ["言葉、写真、構成、企画の貢献に対して、軽い称賛から強い称賛まで使い分けます。", "1パック1,000円で1,000Point分です。"],
+          },
+        ],
+      };
+
+      shopCatalog.commons[0].avatar = "https://images.unsplash.com/photo-1461896836934-ffe607ba8211?auto=format&fit=crop&w=160&q=80";
+      shopCatalog.commons[1].avatar = "https://images.unsplash.com/photo-1521587760476-6c12a4b040da?auto=format&fit=crop&w=160&q=80";
+      shopCatalog.commons[2].avatar = "https://images.unsplash.com/photo-1518005020951-eccb494ad742?auto=format&fit=crop&w=160&q=80";
+      shopCatalog.commons[3].avatar = "https://images.unsplash.com/photo-1500382017468-9049fed747ef?auto=format&fit=crop&w=160&q=80";
+      shopCatalog.commons[4].avatar = "https://images.unsplash.com/photo-1497366754035-f200968a6e72?auto=format&fit=crop&w=160&q=80";
+      shopCatalog.stamps[0].avatar = "assets/stamps/stamp-thanks-anime.png";
+      shopCatalog.stamps[1].avatar = "assets/stamps/stamp-field-anime.png";
+      shopCatalog.stamps[2].avatar = "assets/stamps/stamp-creative-anime.png";
+
+      shopCatalog.skills.push(
+        {
+          id: "skill-grant-01",
+          type: "skills",
+          name: "補助金ストーリー設計",
+          subtitle: "助成金 / 申請書 / 社会的インパクト",
+          provider: "Mina H.",
+          avatar: "assets/skills/mina-hoshino.png",
+          price: 28000,
+          unit: "3週間",
+          capacity: "週2時間",
+          experience: "地域助成金・NPO支援 10年",
+          location: "オンライン",
+          rating: 4.8,
+          likes: 104,
+          reviews: 21,
+          response: "平均10時間以内",
+          verified: "採択実績確認済み",
+          fit: 90,
+          tags: ["資金調達", "申請書", "インパクト"],
+          review: "活動の意味が審査員に伝わる言葉へ整理された。",
+          detail: ["支援内容: 事業目的、社会課題、成果指標、予算根拠を申請書に落とし込みます。", "過去職歴: 財団プログラム担当、NPO伴走、自治体補助金審査補助。", "納品物: 申請書骨子、予算表、成果指標、審査Q&A。"],
+        },
+        {
+          id: "skill-recruit-01",
+          type: "skills",
+          name: "採用スカウト文面改善",
+          subtitle: "採用 / 副業人材 / 面談設計",
+          provider: "Nao S.",
+          avatar: "assets/skills/naoko-sato.png",
+          price: 16000,
+          unit: "2週間",
+          capacity: "週3時間",
+          experience: "スタートアップ採用 6年",
+          location: "オンライン",
+          rating: 4.7,
+          likes: 88,
+          reviews: 18,
+          response: "平均8時間以内",
+          verified: "面談同席可",
+          fit: 89,
+          tags: ["採用", "副業", "面談"],
+          review: "応募者に任せたい役割が具体的に伝わるようになった。",
+          detail: ["支援内容: 募集要件、スカウト文、面談質問、評価基準を短期間で整えます。", "過去職歴: 人材紹介、SaaS採用、コミュニティ採用。", "納品物: 募集票、スカウト文3種、面談ガイド、候補者評価シート。"],
+        },
+        {
+          id: "skill-research-01",
+          type: "skills",
+          name: "初期顧客インタビュー設計",
+          subtitle: "ユーザー調査 / 仮説検証 / 質問票",
+          provider: "Yui T.",
+          avatar: "assets/skills/yuki-matsuda.png",
+          price: 24000,
+          unit: "10日",
+          capacity: "週4時間",
+          experience: "UXリサーチ 8年",
+          location: "オンライン + 現地1回",
+          rating: 4.9,
+          likes: 153,
+          reviews: 34,
+          response: "平均6時間以内",
+          verified: "録画レビュー可",
+          fit: 97,
+          tags: ["顧客調査", "UX", "仮説検証"],
+          review: "聞きたいことではなく、聞くべきことに変わった。",
+          detail: ["支援内容: 仮説、対象者、質問票、記録方法、分析観点を設計します。", "過去職歴: B2CアプリUXR、自治体住民調査、新規事業検証。", "納品物: インタビュー設計書、質問票、分析テンプレート、示唆メモ。"],
+        },
+        {
+          id: "skill-community-01",
+          type: "skills",
+          name: "地域コミュニティ巻き込み",
+          subtitle: "住民参加 / イベント設計 / 合意形成",
+          provider: "Sota N.",
+          avatar: "assets/skills/sota-nakamura.png",
+          price: 26000,
+          unit: "1カ月",
+          capacity: "週3時間",
+          experience: "地域イベント運営 12年",
+          location: "海士町 + オンライン",
+          rating: 4.8,
+          likes: 119,
+          reviews: 25,
+          response: "平均1日以内",
+          verified: "現地調整可",
+          fit: 93,
+          tags: ["地域", "合意形成", "イベント"],
+          review: "反対意見も含めて、参加しやすい場の順番が見えた。",
+          detail: ["支援内容: 協力者マップ、声かけ順、説明会設計、当日運営を支援します。", "過去職歴: 地域おこし協力隊伴走、商店街イベント、住民説明会。", "納品物: 関係者マップ、説明会台本、参加導線、リスクメモ。"],
+        },
+        {
+          id: "skill-design-01",
+          type: "skills",
+          name: "プロトタイプUI伴走",
+          subtitle: "UI設計 / Figma / 体験導線",
+          provider: "Lena A.",
+          avatar: "assets/skills/grace-williams.png",
+          price: 35000,
+          unit: "2週間",
+          capacity: "週5時間",
+          experience: "プロダクトデザイン 9年",
+          location: "オンライン",
+          rating: 4.9,
+          likes: 167,
+          reviews: 29,
+          response: "平均4時間以内",
+          verified: "Figma対応",
+          fit: 95,
+          tags: ["UI", "プロトタイプ", "Figma"],
+          review: "説明しなくても触れば分かる画面に近づいた。",
+          detail: ["支援内容: 情報設計、画面遷移、主要コンポーネント、UI文言を整えます。", "過去職歴: SaaSデザイナー、C向けアプリ、社内ツール改善。", "納品物: 画面ワイヤー、UI改善案、コンポーネント一覧、優先度表。"],
+        },
+        {
+          id: "skill-ai-ops-01",
+          type: "skills",
+          name: "AI業務フロー自動化",
+          subtitle: "AI活用 / Zapier / 運用設計",
+          provider: "Eito F.",
+          avatar: "assets/skills/jiro-tanaka.png",
+          price: 32000,
+          unit: "3週間",
+          capacity: "週4時間",
+          experience: "業務自動化 7年",
+          location: "オンライン",
+          rating: 4.6,
+          likes: 94,
+          reviews: 17,
+          response: "平均12時間以内",
+          verified: "API連携可",
+          fit: 87,
+          tags: ["AI", "自動化", "業務設計"],
+          review: "手作業で漏れていた確認が、毎日自動で見えるようになった。",
+          detail: ["支援内容: 定型作業の棚卸し、AIプロンプト、通知、承認フローを設計します。", "過去職歴: ノーコード自動化、API連携、社内DX支援。", "納品物: 自動化フロー図、プロンプト、運用ルール、例外処理表。"],
+        },
+        {
+          id: "skill-sales-01",
+          type: "skills",
+          name: "法人営業リスト構築",
+          subtitle: "営業 / リード獲得 / 提案メール",
+          provider: "Kai M.",
+          avatar: "assets/skills/marcus-johnson.png",
+          price: 19000,
+          unit: "2週間",
+          capacity: "週3時間",
+          experience: "B2B営業 8年",
+          location: "オンライン",
+          rating: 4.5,
+          likes: 71,
+          reviews: 13,
+          response: "平均1日以内",
+          verified: "CRM入力可",
+          fit: 84,
+          tags: ["営業", "法人", "リスト"],
+          review: "誰に何を送るべきかが絞れ、返信率を見る準備ができた。",
+          detail: ["支援内容: ターゲット定義、企業リスト、初回提案文、追客設計を作ります。", "過去職歴: インサイドセールス、アライアンス営業、CRM運用。", "納品物: 営業リスト、提案メール、追客ステータス、KPI表。"],
+        },
+        {
+          id: "skill-photo-01",
+          type: "skills",
+          name: "商品撮影ディレクション",
+          subtitle: "撮影 / EC / SNS素材",
+          provider: "Mao R.",
+          avatar: "assets/skills/mao-riku.png",
+          price: 21000,
+          unit: "1週間",
+          capacity: "週6時間",
+          experience: "EC撮影・編集 6年",
+          location: "現地半日 + オンライン",
+          rating: 4.7,
+          likes: 82,
+          reviews: 15,
+          response: "平均6時間以内",
+          verified: "撮影指示書可",
+          fit: 88,
+          tags: ["撮影", "EC", "SNS"],
+          review: "写真の雰囲気が統一され、販売ページが急に見やすくなった。",
+          detail: ["支援内容: 撮影カット、背景、小物、光、掲載順を設計します。", "過去職歴: ECブランド撮影、SNS素材制作、商品ページ改善。", "納品物: 撮影指示書、カットリスト、レタッチ方針、SNS投稿案。"],
+        },
+        {
+          id: "skill-facilitation-01",
+          type: "skills",
+          name: "意思決定MTGファシリ",
+          subtitle: "会議設計 / 論点整理 / 合意形成",
+          provider: "Jun O.",
+          avatar: "assets/skills/andre-brooks.png",
+          price: 17000,
+          unit: "2回",
+          capacity: "各2時間",
+          experience: "事業会議ファシリ 10年",
+          location: "オンライン",
+          rating: 4.8,
+          likes: 111,
+          reviews: 22,
+          response: "平均5時間以内",
+          verified: "議事録対応",
+          fit: 91,
+          tags: ["会議", "意思決定", "議事録"],
+          review: "議論が広がりすぎず、決めることが決まった。",
+          detail: ["支援内容: 論点、アジェンダ、判断基準、次アクションを設計します。", "過去職歴: 経営会議運営、事業レビュー、プロジェクトPMO。", "納品物: アジェンダ、議事録、決定事項、宿題リスト。"],
+        },
+        {
+          id: "skill-writing-01",
+          type: "skills",
+          name: "note記事・活動レポート編集",
+          subtitle: "編集 / ライティング / 発信設計",
+          provider: "Haru C.",
+          avatar: "assets/skills/haru-chiba.png",
+          price: 14000,
+          unit: "1本",
+          capacity: "3営業日",
+          experience: "編集・広報ライター 11年",
+          location: "オンライン",
+          rating: 4.6,
+          likes: 69,
+          reviews: 14,
+          response: "平均12時間以内",
+          verified: "校正対応",
+          fit: 86,
+          tags: ["編集", "発信", "note"],
+          review: "活動報告が、次の協力者を呼ぶ文章になった。",
+          detail: ["支援内容: 構成、見出し、本文、写真キャプション、CTAを整えます。", "過去職歴: Webメディア編集、企業広報、採用広報記事。", "納品物: 記事構成、本文編集、タイトル案、公開前チェック。"],
+        }
+      );
+
+      const skillProfileAssets = [
+        { provider: "Ryo Kobayashi", avatar: "assets/skills/ryo-kobayashi.png", persona: "日本人 / 男性 / 20代", imageStyle: "実写" },
+        { provider: "Akiko Senda", avatar: "assets/skills/akiko-senda.png", persona: "日本人 / 女性 / 30代", imageStyle: "実写" },
+        { provider: "Ken Takeda", avatar: "assets/skills/ken-takeda.png", persona: "日本人 / 男性 / 60代", imageStyle: "実写" },
+        { provider: "Yuki Matsuda", avatar: "assets/skills/yuki-matsuda.png", persona: "日本人 / 女性 / 50代", imageStyle: "実写" },
+        { provider: "Marcus Johnson", avatar: "assets/skills/marcus-johnson.png", persona: "黒人 / 男性 / 30代", imageStyle: "実写" },
+        { provider: "Daisuke Mori", avatar: "assets/skills/daisuke-mori.png", persona: "日本人 / 男性 / 40代", imageStyle: "実写" },
+        { provider: "Mizuki Aoki", avatar: "assets/skills/mizuki-aoki.png", persona: "日本人 / 女性 / 20代", imageStyle: "実写" },
+        { provider: "Naoko Sato", avatar: "assets/skills/naoko-sato.png", persona: "日本人 / 女性 / 60代", imageStyle: "実写" },
+        { provider: "Sota Nakamura", avatar: "assets/skills/sota-nakamura.png", persona: "日本人 / 男性 / 30代", imageStyle: "実写" },
+        { provider: "Grace Williams", avatar: "assets/skills/grace-williams.png", persona: "黒人 / 女性 / 40代", imageStyle: "実写" },
+        { provider: "Mina Hoshino", avatar: "assets/skills/mina-hoshino.png", persona: "日本人 / 女性 / 40代", imageStyle: "実写" },
+        { provider: "Haru Chiba", avatar: "assets/skills/haru-chiba.png", persona: "日本人 / 男性 / 50代", imageStyle: "実写" },
+        { provider: "Mao Riku", avatar: "assets/skills/mao-riku.png", persona: "日本人 / 女性 / 20代", imageStyle: "イラスト" },
+        { provider: "Andre Brooks", avatar: "assets/skills/andre-brooks.png", persona: "黒人 / 男性 / 20代", imageStyle: "イラスト" },
+        { provider: "Jiro Tanaka", avatar: "assets/skills/jiro-tanaka.png", persona: "日本人 / 男性 / 60代", imageStyle: "イラスト" },
+      ];
+      const skillAvatarVersion = "?v=insta-profile-20260612";
+
+      shopCatalog.skills.forEach((item, index) => {
+        const profile = skillProfileAssets[index];
+        if (!profile) return;
+        item.provider = profile.provider;
+        item.avatar = `${profile.avatar}${skillAvatarVersion}`;
+        item.persona = profile.persona;
+        item.imageStyle = profile.imageStyle;
+      });
+
+      shopCatalog.commons.push(
+        {
+          id: "commons-cowork-02",
+          type: "commons",
+          name: "町営コワーキング KINNYA",
+          subtitle: "集中作業 / 相談会 / オンライン会議",
+          provider: "海士町交流拠点",
+          avatar: "https://images.unsplash.com/photo-1497366811353-6870744d04b2?auto=format&fit=crop&w=160&q=80",
+          price: 2000,
+          unit: "1時間",
+          capacity: "20人",
+          location: "港エリア 徒歩5分",
+          rating: 4.8,
+          likes: 98,
+          reviews: 20,
+          response: "即時予約",
+          verified: "公共施設",
+          fit: 94,
+          tags: ["コワーキング", "会議", "Wi-Fi"],
+          review: "移動の合間でも、商談と作業を同じ場所で済ませられた。",
+          detail: ["利用用途: 集中作業、オンライン会議、相談会、資料作成。", "設備: Wi-Fi、電源、モニター、会議ブース、複合機。", "注意: イベント利用時は事前に音量と席数を確認。"],
+        },
+        {
+          id: "commons-hall-01",
+          type: "commons",
+          name: "中央公民館 大広間",
+          subtitle: "説明会 / 住民ワークショップ / 展示",
+          provider: "公民館管理室",
+          avatar: "https://images.unsplash.com/photo-1517457373958-b7bdd4587205?auto=format&fit=crop&w=160&q=80",
+          price: 6000,
+          unit: "半日",
+          capacity: "60人",
+          location: "海士町中心部",
+          rating: 4.5,
+          likes: 61,
+          reviews: 12,
+          response: "承認目安 1日",
+          verified: "公共施設",
+          fit: 85,
+          tags: ["公民館", "説明会", "展示"],
+          review: "高齢者にも来てもらいやすく、説明会の参加率が上がった。",
+          detail: ["利用用途: 住民説明会、展示、ワークショップ、地域報告会。", "設備: 長机、椅子、マイク、畳スペース、駐車場。", "注意: 利用後の清掃、備品返却、飲食申請が必要。"],
+        },
+        {
+          id: "commons-forest-01",
+          type: "commons",
+          name: "森の素材フィールド",
+          subtitle: "自然素材 / 体験学習 / 撮影",
+          provider: "森林組合パートナー",
+          avatar: "https://images.unsplash.com/photo-1448375240586-882707db888b?auto=format&fit=crop&w=160&q=80",
+          price: 10000,
+          unit: "1日",
+          capacity: "12人",
+          location: "町内森林エリア",
+          rating: 4.7,
+          likes: 73,
+          reviews: 16,
+          response: "承認目安 2日",
+          verified: "自然資源",
+          fit: 83,
+          tags: ["森林", "素材", "体験"],
+          review: "木材や葉の質感を直接見ながら、商品企画の解像度が上がった。",
+          detail: ["利用用途: 自然素材調査、撮影、体験学習、企画リサーチ。", "設備: 案内人、簡易休憩所、作業道、軽装備相談。", "注意: 天候、立入範囲、安全装備、採取可否を事前確認。"],
+        },
+        {
+          id: "commons-harbor-01",
+          type: "commons",
+          name: "漁港ワークベース",
+          subtitle: "漁業体験 / 水産素材 / 早朝撮影",
+          provider: "漁協サポート",
+          avatar: "https://images.unsplash.com/photo-1507525428034-b723cf961d3e?auto=format&fit=crop&w=160&q=80",
+          price: 18000,
+          unit: "半日",
+          capacity: "10人",
+          location: "港周辺",
+          rating: 4.6,
+          likes: 66,
+          reviews: 10,
+          response: "承認目安 2日",
+          verified: "水産資源",
+          fit: 80,
+          tags: ["漁港", "水産", "体験"],
+          review: "地域資源のストーリーを、現場で理解できた。",
+          detail: ["利用用途: 水産素材調査、漁業体験、撮影、地域学習。", "設備: 集合スペース、作業台、水場、案内人相談。", "注意: 早朝利用、天候、衛生管理、漁協承認が必要。"],
+        },
+        {
+          id: "commons-mama-01",
+          type: "commons",
+          name: "ママコミュニティルーム",
+          subtitle: "子育て層ヒアリング / 小規模イベント",
+          provider: "子育てコミュニティ",
+          avatar: "https://images.unsplash.com/photo-1529156069898-49953e39b3ac?auto=format&fit=crop&w=160&q=80",
+          price: 4000,
+          unit: "2時間",
+          capacity: "15人",
+          location: "町内交流スペース",
+          rating: 4.9,
+          likes: 121,
+          reviews: 24,
+          response: "承認目安 1日",
+          verified: "親子利用可",
+          fit: 92,
+          tags: ["子育て", "コミュニティ", "ヒアリング"],
+          review: "子連れでも話しやすく、本音の意見を聞けた。",
+          detail: ["利用用途: 子育て層ヒアリング、座談会、親子イベント。", "設備: キッズマット、授乳スペース、電源、簡易キッチン。", "注意: 託児ではないため、進行役と見守り役の分担が必要。"],
+        },
+        {
+          id: "commons-gym-01",
+          type: "commons",
+          name: "旧小学校 体育館",
+          subtitle: "大型ワークショップ / 展示 / 運動企画",
+          provider: "廃校活用チーム",
+          avatar: "https://images.unsplash.com/photo-1577223625816-7546f13df25d?auto=format&fit=crop&w=160&q=80",
+          price: 22000,
+          unit: "半日",
+          capacity: "120人",
+          location: "旧校舎エリア",
+          rating: 4.4,
+          likes: 52,
+          reviews: 8,
+          response: "承認目安 3日",
+          verified: "大型施設",
+          fit: 78,
+          tags: ["体育館", "展示", "大型"],
+          review: "展示と体験ブースを分けても、十分な余白があった。",
+          detail: ["利用用途: 展示会、大型ワークショップ、運動企画、地域フェス。", "設備: 体育館、ステージ、放送設備、倉庫、駐車場。", "注意: 床養生、搬入経路、冷暖房、音量制限を確認。"],
+        },
+        {
+          id: "commons-soccer-01",
+          type: "commons",
+          name: "民間サッカーグラウンド",
+          subtitle: "スポーツ企画 / チームビルド / 撮影",
+          provider: "スポーツクラブ",
+          avatar: "https://images.unsplash.com/photo-1431324155629-1a6deb1dec8d?auto=format&fit=crop&w=160&q=80",
+          price: 14000,
+          unit: "1時間",
+          capacity: "80人",
+          location: "町外連携施設",
+          rating: 4.6,
+          likes: 77,
+          reviews: 13,
+          response: "即時予約",
+          verified: "民間施設",
+          fit: 81,
+          tags: ["サッカー", "運動", "撮影"],
+          review: "スポーツ文脈の企画を、すぐ試せる場所だった。",
+          detail: ["利用用途: スポーツイベント、チームビルド、屋外撮影。", "設備: 人工芝、照明、更衣室、駐車場、備品レンタル。", "注意: 雨天キャンセル、スパイク規定、保険加入を確認。"],
+        }
+      );
+
+      shopCatalog.stamps.push(
+        {
+          id: "stamp-respect-01",
+          type: "stamps",
+          name: "リスペクト職人パック",
+          subtitle: "専門スキル・丁寧な作業への称賛Emote",
+          provider: ".d works",
+          avatar: "assets/stamps/stamp-respect-anime.png",
+          price: 1000,
+          unit: "1,000Point",
+          capacity: "20個",
+          location: "チーム全体で利用可",
+          rating: 4.8,
+          likes: 176,
+          reviews: 31,
+          response: "即時反映",
+          verified: "1Point=1円",
+          fit: 96,
+          tags: ["尊敬", "専門性", "丁寧"],
+          review: "地味だけど重要な専門貢献を、ちゃんと讃えられる。",
+          icons: ["🧑‍🏭", "🛠️", "🔧", "📐", "🧪", "🧰", "🧵", "🪚", "🧑‍💻", "📊", "🧾", "🔬", "📎", "🪛", "🧱", "🧮", "📏", "🔐", "🗂️", "⭐"],
+          detail: ["パック仕様: 20個のEmoteで、合計1,000Pointです。", "送信ルール: 専門作業やレビューへの感謝をPoint付きで送れます。"],
+        },
+        {
+          id: "stamp-speed-01",
+          type: "stamps",
+          name: "スピード感謝パック",
+          subtitle: "即レス・即対応・締切救済向けEmote",
+          provider: ".d works",
+          avatar: "assets/stamps/stamp-speed-anime.png",
+          price: 1000,
+          unit: "1,000Point",
+          capacity: "20個",
+          location: "チーム全体で利用可",
+          rating: 4.7,
+          likes: 144,
+          reviews: 22,
+          response: "即時反映",
+          verified: "1Point=1円",
+          fit: 94,
+          tags: ["即対応", "締切", "救済"],
+          review: "急ぎの助けに対して、軽すぎない感謝を返せる。",
+          icons: ["⚡", "🚀", "🏃", "⏱️", "🔥", "💨", "📨", "✅", "🛟", "🎯", "📌", "📣", "🔔", "🧭", "💪", "🪄", "🌪️", "🥇", "🙌", "💛"],
+          detail: ["パック仕様: 20個のEmoteで、合計1,000Pointです。", "利用シーン: 期限直前の対応、即レス、緊急ヘルプの感謝に使います。"],
+        },
+        {
+          id: "stamp-learning-01",
+          type: "stamps",
+          name: "学び共有パック",
+          subtitle: "知見共有・レビュー・振り返り向けEmote",
+          provider: ".d works",
+          avatar: "assets/stamps/stamp-learning-anime.png",
+          price: 1000,
+          unit: "1,000Point",
+          capacity: "20個",
+          location: "チーム全体で利用可",
+          rating: 4.6,
+          likes: 118,
+          reviews: 19,
+          response: "即時反映",
+          verified: "1Point=1円",
+          fit: 91,
+          tags: ["学び", "共有", "レビュー"],
+          review: "レビューが指摘だけで終わらず、学びとして残る。",
+          icons: ["📚", "💡", "🧠", "🔍", "📝", "🗒️", "📖", "🎓", "🧩", "📌", "🧭", "🧪", "🔁", "🗣️", "👀", "✨", "✅", "🌱", "🤝", "⭐"],
+          detail: ["パック仕様: 20個のEmoteで、合計1,000Pointです。", "利用シーン: 学びの共有、レビュー、振り返り、改善提案に使います。"],
+        },
+        {
+          id: "stamp-local-01",
+          type: "stamps",
+          name: "地域つながりパック",
+          subtitle: "紹介・橋渡し・現地協力への感謝Emote",
+          provider: ".d works",
+          avatar: "assets/stamps/stamp-local-anime.png",
+          price: 1000,
+          unit: "1,000Point",
+          capacity: "20個",
+          location: "チーム全体で利用可",
+          rating: 4.9,
+          likes: 201,
+          reviews: 37,
+          response: "即時反映",
+          verified: "1Point=1円",
+          fit: 98,
+          tags: ["地域", "紹介", "橋渡し"],
+          review: "人をつないでくれた価値を、ちゃんと見える化できる。",
+          icons: ["🤝", "🏡", "🗺️", "📍", "🌊", "⛴️", "🌿", "🧑‍🤝‍🧑", "🪧", "📣", "💬", "🫶", "🌞", "🚲", "🎪", "🍙", "🧭", "🌱", "🙏", "💚"],
+          detail: ["パック仕様: 20個のEmoteで、合計1,000Pointです。", "利用シーン: 紹介、現地調整、橋渡し、地域協力への感謝に使います。"],
+        },
+        {
+          id: "stamp-celebrate-01",
+          type: "stamps",
+          name: "打ち上げ祝祭パック",
+          subtitle: "完了・達成・節目を祝うEmote",
+          provider: ".d works",
+          avatar: "assets/stamps/stamp-celebrate-anime.png",
+          price: 1000,
+          unit: "1,000Point",
+          capacity: "20個",
+          location: "チーム全体で利用可",
+          rating: 4.8,
+          likes: 188,
+          reviews: 28,
+          response: "即時反映",
+          verified: "1Point=1円",
+          fit: 95,
+          tags: ["完了", "達成", "祝祭"],
+          review: "完了報告がただのチェックではなく、次のやる気につながる。",
+          icons: ["🎉", "🥂", "🏁", "🏆", "🌟", "🎊", "🙌", "👏", "🔥", "🍻", "🎁", "💐", "🥇", "🚩", "✨", "💃", "🕺", "📸", "✅", "💛"],
+          detail: ["パック仕様: 20個のEmoteで、合計1,000Pointです。", "利用シーン: タスク完了、イベント終了、納品、節目の達成に使います。"],
+        }
+      );
+
+      const amaImages = {
+        ento: "https://visit-okiislands.e-oki.net/wp/wp-content/uploads/2023/12/accom_30_0-1300x866.jpg",
+        entoRoom: "https://visit-okiislands.e-oki.net/wp/wp-content/uploads/2023/12/accom_30_2-1300x866.jpg",
+        entoDining: "https://visit-okiislands.e-oki.net/wp/wp-content/uploads/2023/12/accom_30_3-1300x865.jpg",
+        entoBath: "https://visit-okiislands.e-oki.net/wp/wp-content/uploads/2023/12/accom_30_4-1300x866.jpg",
+        kinnya: "https://www.kankou-shimane.com/jp/wp-content/uploads/2020/03/3756-kinnyamonyasenta-001-e1585033880231.jpg",
+        kinnyaInside: "https://www.kankou-shimane.com/jp/wp-content/uploads/2020/03/3756-kinnyamonyasenta-002-e1585033939420.jpg",
+        kinnyaShop: "https://www.kankou-shimane.com/jp/wp-content/uploads/2020/03/3756-kinnyamonyasenta-003-e1585033958749.jpg",
+        okiShrine: "https://www.kankou-shimane.com/jp/wp-content/uploads/2020/03/4555-okijinja-001-1.jpg",
+        okiShrineCherry: "https://www.kankou-shimane.com/jp/wp-content/uploads/2020/03/4555-okijinja-005-1.jpg",
+        amanbow: "https://www.kankou-shimane.com/jp/wp-content/uploads/2020/03/2891-kaichuutenbousenamanbou-001-e1585011229591.jpg",
+        amanbowNight: "https://www.kankou-shimane.com/jp/wp-content/uploads/2022/09/amanbou2-okikenminkyoku-9.png",
+        sea: "https://images.unsplash.com/photo-1507525428034-b723cf961d3e?auto=format&fit=crop&w=320&q=80",
+      };
+
+      shopCatalog.commons = [
+        {
+          id: "commons-ento-geo-room",
+          type: "commons",
+          name: "Entô Geo Room Discover",
+          subtitle: "ジオパーク学習 / 企画前リサーチ / 研修導入",
+          provider: "Entô / Oki Islands UNESCO Global Geopark",
+          avatar: amaImages.ento,
+          price: 12000,
+          unit: "2時間",
+          capacity: "15人",
+          location: "海士町福井1375-1 / 菱浦港徒歩圏",
+          rating: 4.9,
+          likes: 186,
+          reviews: 42,
+          response: "承認目安 1日",
+          verified: "実在施設ベース",
+          fit: 98,
+          tags: ["Entô", "ジオパーク", "学習"],
+          review: "地質・歴史・暮らしの文脈が入り、企画の説得力が一段上がった。",
+          detail: [
+            "利用用途: 企画前リサーチ、島の文脈理解、研修導入、ツアー前ブリーフィング。",
+            "設備: Geo Room Discover、展示、案内導線、周辺アクティビティ連携。",
+            "実在情報: Entôは隠岐ユネスコ世界ジオパークの泊まれる拠点。Geo Room Discoverは無料で学べる展示室として紹介されています。",
+            "予約条件: 実際の一般利用条件は施設確認が必要。この価格は.d works内のワーク利用枠としての仮設定です。",
+          ],
+        },
+        {
+          id: "commons-ento-lounge",
+          type: "commons",
+          name: "Entô Geo Lounge",
+          subtitle: "集中作業 / 内省MTG / 眺望レビュー",
+          provider: "Entô",
+          avatar: amaImages.entoRoom,
+          price: 9000,
+          unit: "2時間",
+          capacity: "6人",
+          location: "Entô NEST 1F想定",
+          rating: 4.8,
+          likes: 142,
+          reviews: 31,
+          response: "承認目安 1日",
+          verified: "施設情報参照",
+          fit: 95,
+          tags: ["Entô", "ラウンジ", "内省"],
+          review: "海を見ながらのレビューで、短時間でも意思決定の質が上がった。",
+          detail: [
+            "利用用途: 経営レビュー、採用面談、編集会議、内省ワーク。",
+            "設備: 海を望むラウンジ、ソファ、静かな滞在環境、館内導線。",
+            "実在情報: Entô公式はGeo Loungeを、地球の時間とつながる空間として紹介しています。",
+            "注意事項: 宿泊者・来館者利用との兼ね合いがあるため、商用利用は事前確認が必要です。",
+          ],
+        },
+        {
+          id: "commons-ento-banquet",
+          type: "commons",
+          name: "Entô 宴会場・特別会議枠",
+          subtitle: "重要MTG / 地域報告会 / 小規模フォーラム",
+          provider: "Entô",
+          avatar: amaImages.entoBath,
+          price: 36000,
+          unit: "半日",
+          capacity: "40人",
+          location: "Entô 本館3F想定",
+          rating: 4.7,
+          likes: 96,
+          reviews: 18,
+          response: "承認目安 2日",
+          verified: "施設情報参照",
+          fit: 88,
+          tags: ["会議", "報告会", "Entô"],
+          review: "島外ゲストを招いた報告会でも、場所の説得力があった。",
+          detail: [
+            "利用用途: 事業報告、地域フォーラム、パートナー会議、ワークショップ。",
+            "設備: 宴会場、机椅子、食事連携、宿泊連携。",
+            "実在情報: Entô公式は3階に特別な会議や会食に使えるBanquet Hallがあると紹介しています。",
+            "注意事項: 実際の料金・貸切可否は施設確認が必要です。",
+          ],
+        },
+        {
+          id: "commons-ento-library",
+          type: "commons",
+          name: "Entô 島まるごと図書館分館",
+          subtitle: "読書会 / 事前学習 / 静かな編集作業",
+          provider: "Entô / 島まるごと図書館",
+          avatar: amaImages.entoRoom,
+          price: 5000,
+          unit: "2時間",
+          capacity: "8人",
+          location: "Entô BASE 1F想定",
+          rating: 4.9,
+          likes: 128,
+          reviews: 29,
+          response: "承認目安 12時間",
+          verified: "公共性あり",
+          fit: 94,
+          tags: ["図書館", "読書会", "編集"],
+          review: "静かに資料を読み込み、議論の前提を揃えられた。",
+          detail: [
+            "利用用途: 読書会、資料レビュー、編集作業、島の暮らしのリサーチ。",
+            "設備: 図書、閲覧スペース、Geo Lounge隣接、海を見ながら読める環境。",
+            "実在情報: Entô公式は館内に島まるごと図書館の分館があり、宿泊者と島民に開かれた公共的な空間と紹介しています。",
+            "注意事項: 静かな利用が前提。イベント利用は事前に目的と人数を確認してください。",
+          ],
+        },
+        {
+          id: "commons-ento-dining",
+          type: "commons",
+          name: "Entô Dining 地産地消キッチン連携",
+          subtitle: "食の企画 / 生産者ヒアリング / 試食会",
+          provider: "Entô Dining",
+          avatar: amaImages.entoDining,
+          price: 28000,
+          unit: "1回",
+          capacity: "12人",
+          location: "Entô Dining",
+          rating: 4.8,
+          likes: 117,
+          reviews: 24,
+          response: "承認目安 3日",
+          verified: "地元食材",
+          fit: 90,
+          tags: ["食", "地産地消", "試食"],
+          review: "食材の背景まで共有でき、商品コンセプトが強くなった。",
+          detail: [
+            "利用用途: 地域食材の企画、試食会、生産者ストーリー整理、食のPR設計。",
+            "設備: ダイニング連携、季節食材、料理提供、撮影相談。",
+            "実在情報: Entô公式は島の生産者による魚・肉・野菜・果物、海藻やハーブを活かした地産地消の料理を紹介しています。",
+            "注意事項: 食材・日程・提供形式は季節と施設都合に左右されます。",
+          ],
+        },
+        {
+          id: "commons-kinnya-hub",
+          type: "commons",
+          name: "菱浦港 キンニャモニャセンター",
+          subtitle: "観光案内 / 港前集合 / 物販調査",
+          provider: "海士町観光協会",
+          avatar: amaImages.kinnya,
+          price: 6000,
+          unit: "2時間",
+          capacity: "20人",
+          location: "海士町菱浦 / フェリー乗り場",
+          rating: 4.8,
+          likes: 151,
+          reviews: 34,
+          response: "即時相談",
+          verified: "実在施設",
+          fit: 96,
+          tags: ["菱浦港", "観光案内", "物販"],
+          review: "到着直後に集合でき、観光・物販・移動の情報が一気に揃った。",
+          detail: [
+            "利用用途: 集合場所、観光導線設計、土産品調査、島外ゲスト受付。",
+            "設備: フェリー乗り場、レストラン、売店、観光案内、駐車場。",
+            "実在情報: 島根県観光ナビでは、海士町の玄関口でフェリー乗り場・レストラン・売店がある施設として紹介されています。",
+            "注意事項: 実際の貸切ではなく、公共的な港前利用を想定したワーク枠です。",
+          ],
+        },
+        {
+          id: "commons-kinnya-shop",
+          type: "commons",
+          name: "キンニャモニャセンター 特産品棚",
+          subtitle: "土産品調査 / POP制作 / 販売導線レビュー",
+          provider: "島じゃ常識商店ほか",
+          avatar: amaImages.kinnyaShop,
+          price: 7000,
+          unit: "2時間",
+          capacity: "6人",
+          location: "キンニャモニャセンター内",
+          rating: 4.7,
+          likes: 104,
+          reviews: 22,
+          response: "承認目安 1日",
+          verified: "特産品連携",
+          fit: 92,
+          tags: ["特産品", "売店", "POP"],
+          review: "特産品の見せ方を現場で確認でき、販売コピーが具体化した。",
+          detail: [
+            "利用用途: 土産品棚調査、販売POP制作、パッケージレビュー、商品導線確認。",
+            "設備: 売店、観光客導線、島の特産品、飲食導線。",
+            "実在情報: 海士町公式は白いか・寒シマメ、あかもく、海士乃塩、海士の本氣米、ふくぎ茶などを特産品として掲載しています。",
+            "注意事項: 店舗営業の妨げにならない範囲で観察・撮影許可を確認してください。",
+          ],
+        },
+        {
+          id: "commons-amanbow-day",
+          type: "commons",
+          name: "海中展望船あまんぼう 体験枠",
+          subtitle: "海洋資源リサーチ / 観光体験 / 撮影",
+          provider: "隠岐諸島観光総合案内窓口",
+          avatar: amaImages.amanbow,
+          price: 2500,
+          unit: "大人1名",
+          capacity: "定員確認",
+          location: "菱浦港フェリーターミナル集合",
+          rating: 4.8,
+          likes: 163,
+          reviews: 39,
+          response: "3日前まで予約推奨",
+          verified: "実在体験",
+          fit: 93,
+          tags: ["あまんぼう", "海", "観光体験"],
+          review: "海中の見え方を体感でき、観光商品の説明がリアルになった。",
+          detail: [
+            "利用用途: 海洋資源リサーチ、観光体験レビュー、動画素材撮影、海の学習。",
+            "設備: 半潜水型展望船、海中展望室、菱浦港発着。",
+            "実在情報: 島根県観光ナビでは、菱浦港発で三郎岩などをめぐり、海中展望室から魚や海藻を楽しめると紹介されています。",
+            "予約条件: 掲載料金は観光ナビの大人2,500円を反映。運航期間・天候・海況の確認が必要です。",
+          ],
+        },
+        {
+          id: "commons-amanbow-night",
+          type: "commons",
+          name: "あまんぼうナイトクルーズ",
+          subtitle: "夜光虫 / 星空 / 夜の観光企画",
+          provider: "Entô / 観光窓口",
+          avatar: amaImages.amanbowNight,
+          price: 2000,
+          unit: "大人1名",
+          capacity: "最少5名",
+          location: "Entôフロント集合",
+          rating: 4.9,
+          likes: 132,
+          reviews: 27,
+          response: "3日前まで予約推奨",
+          verified: "実在体験",
+          fit: 90,
+          tags: ["夜光虫", "星空", "夜企画"],
+          review: "夜の島の静けさを使った企画に転用できた。",
+          detail: [
+            "利用用途: 夜の体験企画、星空・夜光虫コンテンツ、宿泊連動プランの検証。",
+            "設備: 半潜水型展望船、夜の海中観察、Entô連携集合。",
+            "実在情報: 島根県観光ナビではナイトクルーズの所要時間30分、Entôフロント集合、大人2,000円と紹介されています。",
+            "注意事項: 最少催行人数、運航期間、天候・海況で変更があります。",
+          ],
+        },
+        {
+          id: "commons-oki-shrine",
+          type: "commons",
+          name: "隠岐神社 参道リサーチ枠",
+          subtitle: "歴史文脈 / 文化体験 / 参道導線",
+          provider: "隠岐神社",
+          avatar: amaImages.okiShrine,
+          price: 8000,
+          unit: "2時間",
+          capacity: "10人",
+          location: "海士町海士1784",
+          rating: 4.9,
+          likes: 171,
+          reviews: 36,
+          response: "事前相談",
+          verified: "文化財・史跡",
+          fit: 91,
+          tags: ["隠岐神社", "歴史", "文化"],
+          review: "後鳥羽院の文脈を入れることで、地域企画に奥行きが出た。",
+          detail: [
+            "利用用途: 歴史リサーチ、参道導線確認、文化体験設計、ガイド台本づくり。",
+            "設備: 参道、境内、周辺資料館、駐車場。",
+            "実在情報: 島根県観光ナビは、隠岐神社が1939年に後鳥羽天皇700年祭を記念して創建され、隠岐一とされる桜並木があると紹介しています。",
+            "注意事項: 参拝者への配慮、撮影可否、正式参拝の手続き確認が必要です。",
+          ],
+        },
+        {
+          id: "commons-dozen-ferry",
+          type: "commons",
+          name: "島前内航船 移動ワーク",
+          subtitle: "島間連携 / 移動観察 / フィールド調査",
+          provider: "島前内航船ルート想定",
+          avatar: amaImages.sea,
+          price: 300,
+          unit: "大人1乗船",
+          capacity: "定員確認",
+          location: "中ノ島・西ノ島・知夫里島",
+          rating: 4.6,
+          likes: 87,
+          reviews: 16,
+          response: "時刻確認",
+          verified: "実在移動手段",
+          fit: 84,
+          tags: ["島前", "フェリー", "移動"],
+          review: "移動時間そのものをフィールド観察にできた。",
+          detail: [
+            "利用用途: 島間連携調査、移動観察、回遊ルート設計、視察アテンド。",
+            "設備: 島前3島をつなぐ内航船、港前集合、短距離移動。",
+            "実在情報: Entô公式は島前3島を内航船で移動でき、通年運賃大人300円と紹介しています。",
+            "注意事項: 時刻、天候、運航状況を当日確認してください。",
+          ],
+        },
+        {
+          id: "commons-ama-specialties",
+          type: "commons",
+          name: "海士町 特産品リサーチセット",
+          subtitle: "寒シマメ / あかもく / 海士乃塩 / 本氣米",
+          provider: "海士町特産品",
+          avatar: amaImages.kinnyaInside,
+          price: 15000,
+          unit: "1セット",
+          capacity: "試食・調査用",
+          location: "海士町内売店・生産者連携",
+          rating: 4.8,
+          likes: 139,
+          reviews: 28,
+          response: "承認目安 2日",
+          verified: "特産品情報参照",
+          fit: 89,
+          tags: ["特産品", "食材", "商品企画"],
+          review: "島の食材を軸に、ギフト企画と体験企画を同時に考えられた。",
+          detail: [
+            "利用用途: 商品企画、試食会、ギフトセット検討、ECコピー作成。",
+            "設備: 特産品リスト、試食導線、生産者ヒアリング候補、販売棚レビュー。",
+            "実在情報: 海士町公式は白いか・寒シマメ、あかもく、海士乃塩、海士の本氣米、ふくぎ茶、なまこ、さざえカレー、こじょうゆみそを特産品として掲載しています。",
+            "注意事項: 実際の在庫・仕入れ・試食可否は店舗または生産者確認が必要です。",
+          ],
+        },
+      ];
+
+      const commonsOfficialLinks = {
+        "commons-ento-geo-room": [
+          { kind: "サイト", label: "Entô 公式", url: "https://ento-oki.jp/" },
+          { kind: "サイト", label: "Entô 館内施設", url: "https://ento-oki.jp/facility/" },
+          { kind: "SNS", label: "Entô Instagram", url: "https://www.instagram.com/ento_oki" },
+          { kind: "SNS", label: "Entô Facebook", url: "https://www.facebook.com/ento.oki.ama" },
+        ],
+        "commons-ento-lounge": [
+          { kind: "サイト", label: "Entô 館内施設", url: "https://ento-oki.jp/facility/" },
+          { kind: "SNS", label: "Entô Instagram", url: "https://www.instagram.com/ento_oki" },
+          { kind: "SNS", label: "Entô Facebook", url: "https://www.facebook.com/ento.oki.ama" },
+        ],
+        "commons-ento-banquet": [
+          { kind: "サイト", label: "Entô 館内施設", url: "https://ento-oki.jp/facility/" },
+          { kind: "SNS", label: "Entô Instagram", url: "https://www.instagram.com/ento_oki" },
+          { kind: "SNS", label: "Entô Facebook", url: "https://www.facebook.com/ento.oki.ama" },
+        ],
+        "commons-ento-library": [
+          { kind: "サイト", label: "Entô 館内施設", url: "https://ento-oki.jp/facility/" },
+          { kind: "SNS", label: "Entô Instagram", url: "https://www.instagram.com/ento_oki" },
+          { kind: "SNS", label: "Entô Facebook", url: "https://www.facebook.com/ento.oki.ama" },
+        ],
+        "commons-ento-dining": [
+          { kind: "サイト", label: "Entô Food", url: "https://ento-oki.jp/food/" },
+          { kind: "SNS", label: "Entô Instagram", url: "https://www.instagram.com/ento_oki" },
+          { kind: "SNS", label: "Entô Facebook", url: "https://www.facebook.com/ento.oki.ama" },
+        ],
+        "commons-kinnya-hub": [
+          { kind: "サイト", label: "しまね観光ナビ", url: "https://www.kankou-shimane.com/destination/20574" },
+          { kind: "サイト", label: "海士の島旅", url: "https://oki-ama.org/" },
+          { kind: "SNS", label: "海士町 Instagram", url: "https://www.instagram.com/oki_ama/" },
+        ],
+        "commons-kinnya-shop": [
+          { kind: "サイト", label: "海士町 観光・特産品", url: "https://www.town.ama.shimane.jp/kanko-tokusan/" },
+          { kind: "サイト", label: "海士の島旅", url: "https://oki-ama.org/" },
+          { kind: "SNS", label: "海士町 Instagram", url: "https://www.instagram.com/oki_ama/" },
+        ],
+        "commons-amanbow-day": [
+          { kind: "サイト", label: "隠岐の島旅 体験予約", url: "https://experience.e-oki.net/876101" },
+          { kind: "サイト", label: "しまね観光ナビ", url: "https://www.kankou-shimane.com/destination/20320" },
+          { kind: "SNS", label: "隠岐の島旅 Instagram", url: "https://www.instagram.com/okiislands_geopark/" },
+          { kind: "SNS", label: "隠岐の島旅 Facebook", url: "https://www.facebook.com/okiislandsofficial" },
+        ],
+        "commons-amanbow-night": [
+          { kind: "サイト", label: "Entô ナイトクルーズ", url: "https://ento-oki.jp/tour/night-cruise.php" },
+          { kind: "サイト", label: "しまね観光ナビ", url: "https://www.kankou-shimane.com/destination/20320" },
+          { kind: "SNS", label: "Entô Instagram", url: "https://www.instagram.com/ento_oki" },
+        ],
+        "commons-oki-shrine": [
+          { kind: "サイト", label: "隠岐神社 公式", url: "https://okijinja.sakura.ne.jp/" },
+          { kind: "サイト", label: "しまね観光ナビ", url: "https://www.kankou-shimane.com/destination/20457" },
+        ],
+        "commons-dozen-ferry": [
+          { kind: "サイト", label: "Entô Activity", url: "https://ento-oki.jp/tour_activity/" },
+          { kind: "サイト", label: "隠岐の島旅", url: "https://www.e-oki.net/" },
+          { kind: "SNS", label: "隠岐の島旅 Instagram", url: "https://www.instagram.com/okiislands_geopark/" },
+        ],
+        "commons-ama-specialties": [
+          { kind: "サイト", label: "海士町 観光・特産品", url: "https://www.town.ama.shimane.jp/kanko-tokusan/" },
+          { kind: "サイト", label: "海士の島旅", url: "https://discover.town.ama.shimane.jp/" },
+          { kind: "SNS", label: "海士町 Instagram", url: "https://www.instagram.com/oki_ama/" },
+        ],
+      };
+
+      shopCatalog.commons.forEach((item) => {
+        item.officialLinks = commonsOfficialLinks[item.id] || [];
+      });
+
+      shopCatalog.stamps = [
+        {
+          id: "stamp-thanks-original",
+          type: "stamps",
+          name: "ありがとうハートパック",
+          subtitle: "日常の感謝を軽く送れる汎用Emote",
+          provider: ".d works original",
+          avatar: "assets/stamps/pack-thanks-minimal.png",
+          price: 1000,
+          unit: "1,000Point",
+          capacity: "20個",
+          location: "チーム全体で利用可",
+          rating: 4.9,
+          likes: 238,
+          reviews: 48,
+          response: "即時反映",
+          verified: "1Point=1円",
+          fit: 100,
+          tags: ["感謝", "日常", "称賛"],
+          review: "小さな助けにも、重すぎない温度でありがとうを返せる。",
+          icons: ["💛", "🫶", "🙏", "✨", "👏", "😊", "🌿", "☕", "✅", "💬", "🤝", "🙌", "⭐", "🎈", "📌", "💡", "🧡", "🌱", "🎁", "💙"],
+          detail: ["パック仕様: 20個のEmoteで合計1,000Pointです。", "利用シーン: 小さな手伝い、確認、レビュー、相談への感謝。", "Point設計: 1Point=1円。大きい数字ほど強い感謝を表します。"],
+        },
+        {
+          id: "stamp-speed-original",
+          type: "stamps",
+          name: "スピード対応パック",
+          subtitle: "早い返信・即対応・前倒しを称えるEmote",
+          provider: ".d works original",
+          avatar: "assets/stamps/pack-speed-minimal.png",
+          price: 1000,
+          unit: "1,000Point",
+          capacity: "20個",
+          location: "チーム全体で利用可",
+          rating: 4.8,
+          likes: 196,
+          reviews: 34,
+          response: "即時反映",
+          verified: "1Point=1円",
+          fit: 97,
+          tags: ["即対応", "前倒し", "進行"],
+          review: "止まりそうな仕事を素早く前へ進めてくれた人に送りやすい。",
+          icons: ["⚡", "✅", "🏃", "⏱️", "🚀", "📨", "💨", "🔁", "📌", "🧭", "👏", "🙌", "💙", "⭐", "🔥", "🫶", "📣", "🎯", "✨", "🙏"],
+          detail: ["パック仕様: 20個のEmoteで合計1,000Pointです。", "利用シーン: 早い返信、前倒し納品、詰まりの解消、緊急対応への感謝。", "送信ルール: 選択中ワークの感謝Pointに加算します。"],
+        },
+        {
+          id: "stamp-learning-original",
+          type: "stamps",
+          name: "学び共有パック",
+          subtitle: "調査・ナレッジ共有・振り返り向けEmote",
+          provider: ".d works original",
+          avatar: "assets/stamps/pack-learning-minimal.png",
+          price: 1000,
+          unit: "1,000Point",
+          capacity: "20個",
+          location: "チーム全体で利用可",
+          rating: 4.9,
+          likes: 215,
+          reviews: 39,
+          response: "即時反映",
+          verified: "1Point=1円",
+          fit: 98,
+          tags: ["学習", "共有", "調査"],
+          review: "調べたことをチームの資産に変えてくれた人を称えられる。",
+          icons: ["📚", "💡", "📝", "🔍", "🧠", "📖", "✅", "🎓", "📎", "💬", "🧩", "⭐", "👏", "🙌", "🌱", "🫶", "📌", "✨", "🙏", "💚"],
+          detail: ["パック仕様: 20個のEmoteで合計1,000Pointです。", "利用シーン: 調査メモ、ナレッジ共有、レビュー、学習会への感謝。", "Point設計: 1パック1,000円、合計1,000Pointです。"],
+        },
+        {
+          id: "stamp-teamwork-original",
+          type: "stamps",
+          name: "チームワークパック",
+          subtitle: "相談・橋渡し・共同作業に使えるEmote",
+          provider: ".d works original",
+          avatar: "assets/stamps/pack-teamwork-minimal.png",
+          price: 1000,
+          unit: "1,000Point",
+          capacity: "20個",
+          location: "チーム全体で利用可",
+          rating: 4.8,
+          likes: 182,
+          reviews: 33,
+          response: "即時反映",
+          verified: "1Point=1円",
+          fit: 94,
+          tags: ["協働", "相談", "橋渡し"],
+          review: "ひとりでは進まない仕事を、会話で進めた貢献が伝わる。",
+          icons: ["💬", "🤝", "🫶", "🙌", "👥", "📣", "🔁", "✅", "🧭", "🧩", "☕", "👏", "📌", "💙", "🌿", "✨", "🙏", "🎯", "📎", "⭐"],
+          detail: ["パック仕様: 20個のEmoteで合計1,000Pointです。", "利用シーン: 相談、調整、橋渡し、チーム内の合意形成への感謝。", "レビューコメント: 目立ちにくい調整役の貢献を可視化できます。"],
+        },
+        {
+          id: "stamp-celebrate-original",
+          type: "stamps",
+          name: "達成お祝いパック",
+          subtitle: "完了・公開・小さな成功を祝うEmote",
+          provider: ".d works original",
+          avatar: "assets/stamps/pack-celebrate-minimal.png",
+          price: 1000,
+          unit: "1,000Point",
+          capacity: "20個",
+          location: "チーム全体で利用可",
+          rating: 4.8,
+          likes: 207,
+          reviews: 41,
+          response: "即時反映",
+          verified: "1Point=1円",
+          fit: 96,
+          tags: ["完了", "公開", "祝福"],
+          review: "小さな前進を祝う習慣ができ、チームの温度が上がった。",
+          icons: ["🎉", "🎈", "🏁", "✅", "👏", "🙌", "🌟", "🎁", "🥳", "📣", "💐", "🫶", "✨", "💛", "🚀", "🎯", "🙏", "📌", "💬", "⭐"],
+          detail: ["パック仕様: 20個のEmoteで合計1,000Pointです。", "利用シーン: タスク完了、公開、提案通過、初回成果への感謝。", "Point設計: 1Point=1円、1パック1,000Pointです。"],
+        },
+        {
+          id: "stamp-creative-original",
+          type: "stamps",
+          name: "クリエイティブ称賛パック",
+          subtitle: "企画・文章・デザインのよさを伝えるEmote",
+          provider: ".d works original",
+          avatar: "assets/stamps/pack-creative-minimal.png",
+          price: 1000,
+          unit: "1,000Point",
+          capacity: "20個",
+          location: "チーム全体で利用可",
+          rating: 4.7,
+          likes: 169,
+          reviews: 28,
+          response: "即時反映",
+          verified: "1Point=1円",
+          fit: 93,
+          tags: ["企画", "編集", "表現"],
+          review: "よい表現や視点を、その場で軽く称えられる。",
+          icons: ["✏️", "🎨", "🪄", "💡", "📸", "📝", "🎯", "🔍", "✨", "💬", "🧩", "👏", "🙌", "📌", "💜", "🌈", "🙏", "✅", "⭐", "🫶"],
+          detail: ["パック仕様: 20個のEmoteで合計1,000Pointです。", "利用シーン: 企画レビュー、文章編集、デザイン改善、SNS表現への感謝。", "送信ルール: 送信後、選択中ワークの感謝Pointに加算されます。"],
+        },
+        {
+          id: "stamp-ama-sea",
+          type: "stamps",
+          name: "海士の海パック",
+          subtitle: "島・波・フェリーにちなんだAma original Emote",
+          provider: "Ama original",
+          avatar: "assets/stamps/pack-ama-sea-minimal.png",
+          price: 1000,
+          unit: "1,000Point",
+          capacity: "20個",
+          location: "チーム全体で利用可",
+          rating: 4.9,
+          likes: 233,
+          reviews: 46,
+          response: "即時反映",
+          verified: "1Point=1円",
+          fit: 99,
+          tags: ["海士町", "海", "フェリー"],
+          review: "島の移動や海の体験を支えてくれた人に感謝を返せる。",
+          icons: ["🌊", "⛴️", "🏝️", "🐟", "🫧", "⚓", "🧭", "📍", "🗺️", "🌅", "🚲", "🎫", "👋", "🤝", "👏", "🙏", "💙", "✅", "✨", "⭐"],
+          detail: ["パック仕様: 20個のEmoteで合計1,000Pointです。", "利用シーン: フェリー移動、港での案内、海の体験設計、島外ゲスト対応への感謝。", "Point設計: 1パック1,000円、1,000Pointです。"],
+        },
+        {
+          id: "stamp-ama-food",
+          type: "stamps",
+          name: "海士のごちそうパック",
+          subtitle: "寒シマメ・米・海藻にちなんだAma original Emote",
+          provider: "Ama original",
+          avatar: "assets/stamps/pack-ama-food-minimal.png",
+          price: 1000,
+          unit: "1,000Point",
+          capacity: "20個",
+          location: "チーム全体で利用可",
+          rating: 4.8,
+          likes: 174,
+          reviews: 32,
+          response: "即時反映",
+          verified: "1Point=1円",
+          fit: 95,
+          tags: ["海士町", "食", "特産品"],
+          review: "食材調査や試食会の準備に、ちゃんと感謝が返せる。",
+          icons: ["🦑", "🍚", "🌾", "🧂", "🥢", "🍱", "🍵", "🐚", "🪸", "🎁", "🛍️", "📦", "📸", "💬", "👏", "🙏", "💛", "✅", "✨", "⭐"],
+          detail: ["パック仕様: 20個のEmoteで合計1,000Pointです。", "利用シーン: 特産品調査、POP制作、試食会、ECコピー作成への感謝。", "レビューコメント: 海士町らしい食の価値を軽く伝えられます。"],
+        },
+      ];
+
+      const persolSkillIds = new Set(["skill-recruit-01", "skill-design-01", "skill-ai-ops-01"]);
+      shopCatalog.skills.forEach((item) => {
+        if (persolSkillIds.has(item.id)) item.badges = [...(item.badges || []), "PERSOL"];
+      });
+
+      const freeShopItems = {
+        skills: {
+          "skill-legal-01": "なし",
+          "skill-research-01": "1年",
+          "skill-writing-01": "なし",
+        },
+        commons: ["commons-ento-library", "commons-dozen-ferry"],
+        stamps: ["stamp-speed-original", "stamp-ama-food"],
+      };
+      Object.entries(freeShopItems.skills).forEach(([id, unit]) => {
+        const item = shopCatalog.skills.find((entry) => entry.id === id);
+        if (!item) return;
+        item.price = 0;
+        item.unit = unit;
+        item.verified = "無料枠";
+      });
+      freeShopItems.commons.forEach((id) => {
+        const item = shopCatalog.commons.find((entry) => entry.id === id);
+        if (!item) return;
+        item.price = 0;
+        item.verified = "無料枠";
+      });
+      freeShopItems.stamps.forEach((id) => {
+        const item = shopCatalog.stamps.find((entry) => entry.id === id);
+        if (!item) return;
+        item.price = 0;
+        item.verified = "無料パック";
+      });
+      const stampPackIconVersion = "?v=minimal-pack-20260612b";
+      shopCatalog.stamps.forEach((item) => {
+        if (item.avatar.includes("assets/stamps/pack-")) item.avatar = `${item.avatar}${stampPackIconVersion}`;
+      });
+
+      function cn(...values) { return values.filter(Boolean).join(" "); }
+      function member(id) { return members.find((item) => item.id === id) || members[0]; }
+      function hoursSince(iso) { return Math.max(0, Math.floor((now - new Date(iso)) / 36e5)); }
+      function formatTime(iso) {
+        return new Intl.DateTimeFormat("ja-JP", { month: "numeric", day: "numeric", hour: "2-digit", minute: "2-digit" }).format(new Date(iso));
+      }
+      function formatDate(isoOrDate) {
+        return new Intl.DateTimeFormat("ja-JP", { month: "numeric", day: "numeric" }).format(new Date(isoOrDate));
+      }
+      function formatYen(value) {
+        if (Number(value) === 0) return "￥0（無料）";
+        return new Intl.NumberFormat("ja-JP", { style: "currency", currency: "JPY", maximumFractionDigits: 0 }).format(value);
+      }
+      function shopEmotes(item) {
+        return (item.icons || []).map((icon, index) => ({ icon, points: stampPointSet[index], label: `${item.name} ${index + 1}` }));
+      }
+      function stampPointTotal(item) {
+        return shopEmotes(item).reduce((total, emote) => total + emote.points, 0);
+      }
+      function shopDetailSections(item) {
+        const fallbackLabels = {
+          skills: ["支援内容", "過去職歴", "納品物", "進め方"],
+          commons: ["利用用途", "設備", "注意事項", "予約条件"],
+          stamps: ["パック仕様", "送信ルール", "利用シーン", "Point設計"],
+        };
+        const labels = fallbackLabels[item.type] || ["詳細"];
+        return (item.detail || []).map((entry, index) => {
+          if (typeof entry === "object") return entry;
+          const matched = String(entry).match(/^([^:：]{2,16})[:：]\s*(.*)$/);
+          return matched ? { label: matched[1], body: matched[2] } : { label: labels[index] || "詳細", body: entry };
+        });
+      }
+      function formatFileSize(bytes) {
+        if (!bytes) return "サイズ不明";
+        if (bytes < 1024) return `${bytes}B`;
+        if (bytes < 1024 * 1024) return `${Math.round(bytes / 1024)}KB`;
+        return `${(bytes / (1024 * 1024)).toFixed(1)}MB`;
+      }
+      function fileKind(name, type) {
+        const extension = String(name || "").split(".").pop()?.toUpperCase();
+        if (extension && extension !== name) return extension;
+        if (type?.includes("pdf")) return "PDF";
+        if (type?.includes("image")) return "IMG";
+        if (type?.includes("sheet") || type?.includes("excel")) return "XLS";
+        if (type?.includes("document") || type?.includes("word")) return "DOC";
+        return "FILE";
+      }
+      function addDays(date, days) {
+        const next = new Date(date);
+        next.setDate(next.getDate() + days);
+        return next;
+      }
+      function daysBetween(start, end) {
+        const startDate = new Date(start);
+        const endDate = new Date(end);
+        return Math.round((endDate - startDate) / 86400000);
+      }
+      function taskCreator(task) {
+        return task.activity?.[0]?.actor === "ai-batch" ? member("ken") : member(task.assignees[0]);
+      }
+      const dueDaysByPriority = { P0: 1, P1: 3, P2: 6, P3: 10 };
+      const durationByPriority = { P0: 2, P1: 4, P2: 6, P3: 9 };
+      function taskStartDate(task) {
+        return new Date(task.created_at);
+      }
+      function taskDueDate(task) {
+        const duration = durationByPriority[task.priority] || 6;
+        const urgency = dueDaysByPriority[task.priority] || 6;
+        const base = addDays(taskStartDate(task), Math.max(duration, urgency));
+        if (task.status === "done") return new Date(task.updated_at);
+        if (task.status === "blocked") return addDays(base, 3);
+        return base;
+      }
+      function taskDurationDays(task) {
+        return Math.max(1, daysBetween(taskStartDate(task), taskDueDate(task)) + 1);
+      }
+      function dueTone(task) {
+        const remaining = daysBetween(now, taskDueDate(task));
+        if (task.status === "done") return "text-[#137333]";
+        if (remaining < 0) return "text-[#c5221f]";
+        if (remaining <= 2) return "text-[#b06000]";
+        return "text-[#5f6368]";
+      }
+      function nextId(tasks, archive) {
+        const max = [...tasks, ...archive].reduce((acc, task) => Math.max(acc, Number(task.id.replace("T", "")) || 0), 0);
+        return `T${String(max + 1).padStart(4, "0")}`;
+      }
+
+      function Avatar({ id, size = "sm" }) {
+        const m = member(id);
+        const sizeClass = size === "md" ? "h-8 w-8" : "h-6 w-6";
+        return <img src={m.image} alt={`${m.name} / ${m.role}`} title={`${m.name} / ${m.role}`} data-profile-id={id} role="button" tabIndex="0" className={cn("shrink-0 cursor-pointer rounded-full object-cover ring-2 ring-white", sizeClass)} />;
+      }
+
+      function Chip({ children, className = "" }) {
+        return <span className={cn("inline-flex items-center gap-1 rounded-full px-2 py-1 text-xs font-medium", className)}>{children}</span>;
+      }
+
+      function Metric({ label, value, icon, danger = false, active = false, onClick }) {
+        return (
+          <button
+            type="button"
+            onClick={onClick}
+            className={cn(
+              "min-w-[112px] rounded-2xl border bg-white px-3 py-2 text-left shadow-sm transition hover:border-[#d2e3fc] hover:bg-[#f8fafd] focus:outline-none focus:ring-2 focus:ring-[#d2e3fc]",
+              active ? "border-[#d2e3fc] bg-[#e8f0fe] shadow-[0_1px_8px_rgba(95,127,171,.18)]" : "border-[#e8eaed]",
+              danger && active ? "border-[#fad2cf] bg-[#fce8e6]" : ""
+            )}
+            aria-pressed={active}
+            title={`${label}のみ表示`}
+          >
+            <div className="flex items-center gap-2 text-xs font-medium text-[#5f6368]">
+              <Icon name={icon} className={cn("h-4 w-4", danger ? "text-[#ea4335]" : "text-[#5f6368]")} />
+              {label}
+            </div>
+            <div className="mt-1 text-2xl font-normal text-[#202124]">{value}</div>
+          </button>
+        );
+      }
+
+      function IconButton({ title, active, onClick, children }) {
+        return (
+          <button title={title} onClick={onClick} className={cn("grid h-10 w-10 place-items-center rounded-full text-[#5f6368] transition hover:bg-[#e8eaed]", active ? "bg-[#e8f0fe] text-[#1967d2]" : "")}>
+            {children}
+          </button>
+        );
+      }
+
+      function SocialCount({ icon, value }) {
+        return (
+          <span className="inline-flex items-center gap-1 text-xs font-medium text-[#5f6368]">
+            <Icon name={icon} className="h-3.5 w-3.5" />
+            {value}
+          </span>
+        );
+      }
+
+      function WorkTagPreview({ tags }) {
+        return (
+          <div className="flex min-w-0 flex-1 flex-wrap items-center gap-1.5">
+            {tags.map((tag) => (
+              <span key={tag} className="max-w-full rounded-full bg-[#f1f3f4] px-2 py-0.5 text-xs font-medium leading-5 text-[#5f6368]">
+                {tag}
+              </span>
+            ))}
+          </div>
+        );
+      }
+
+      function HelpRequestList({ requests, selectedId, onSelect }) {
+        return (
+          <div className="rounded-3xl border border-[#e8eaed] bg-white p-3 shadow-sm">
+            <div className="flex items-center justify-between gap-2">
+              <div className="flex items-center gap-2 text-sm font-medium text-[#202124]">
+                <Icon name="users" className="h-4 w-4 text-[#1a73e8]" />
+                助け募集
+              </div>
+              <Chip className="bg-[#e6f4ea] text-[#137333]">{requests.length}件</Chip>
+            </div>
+            <div className="mt-1 text-xs leading-5 text-[#5f6368]">人手が必要な仕事と、助けを求めている人</div>
+            <div className="mt-3 max-h-[360px] space-y-2 overflow-y-auto pr-1">
+              {requests.map((request, index) => {
+                const requester = member(request.requester);
+                const selected = selectedId === request.taskId;
+                return (
+                  <button
+                    key={request.id}
+                    onClick={() => onSelect(request.taskId)}
+                    className={cn(
+                      "w-full rounded-2xl border p-3 text-left transition hover:bg-[#f8fafd]",
+                      selected ? "border-[#d2e3fc] bg-[#e8f0fe]" : "border-[#e8eaed] bg-white"
+                    )}
+                    title={`${request.taskId} のカードを表示`}
+                  >
+                    <div className="flex items-start gap-2">
+                      <Avatar id={request.requester} />
+                      <div className="min-w-0 flex-1">
+                        <div className="flex items-center justify-between gap-2">
+                          <span className="truncate text-xs font-medium text-[#5f6368]">{requester.name}</span>
+                          <span className="shrink-0 rounded-full bg-[#f1f3f4] px-2 py-0.5 text-[11px] font-medium text-[#5f6368]">{request.taskId}</span>
+                        </div>
+                        <div className="mt-1 flex min-w-0 items-start gap-2">
+                          <div className="line-clamp-2 text-sm font-medium leading-5 text-[#202124]">{request.title}</div>
+                          {index === 0 && (
+                            <span className="shrink-0 rounded-full bg-[#fef7e0] px-2 py-0.5 text-[11px] font-semibold text-[#b06000] ring-1 ring-[#fdd663]">PR</span>
+                          )}
+                        </div>
+                        <p className="mt-1 line-clamp-2 text-xs leading-5 text-[#5f6368]">{request.note}</p>
+                      </div>
+                    </div>
+                    <div className="mt-3 grid grid-cols-2 gap-2">
+                      <div className="rounded-xl bg-[#f8fafd] px-2 py-1.5">
+                        <div className="flex items-center gap-1 text-[11px] font-medium text-[#5f6368]"><Icon name="calendar" className="h-3.5 w-3.5" />締切</div>
+                        <div className="mt-0.5 text-sm font-semibold text-[#202124]">{request.deadline}</div>
+                      </div>
+                      <div className="rounded-xl bg-[#f8fafd] px-2 py-1.5">
+                        <div className="flex items-center gap-1 text-[11px] font-medium text-[#5f6368]"><Icon name="users" className="h-3.5 w-3.5" />残り</div>
+                        <div className="mt-0.5 text-sm font-semibold text-[#202124]">{request.remaining}人</div>
+                      </div>
+                    </div>
+                    <div className="mt-2 flex flex-wrap gap-1">
+                      {request.tags.map((tag) => <span key={tag} className="rounded-full bg-[#f1f3f4] px-2 py-0.5 text-[11px] font-medium text-[#5f6368]">{tag}</span>)}
+                    </div>
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+        );
+      }
+
+      function ProfileStats({ memberId, tasks, requests }) {
+        const profile = member(memberId);
+        const helpedCount = requests.filter((request) => {
+          const task = tasks.find((item) => item.id === request.taskId);
+          return request.requester !== memberId && task?.assignees.includes(memberId);
+        }).length;
+        const receivedCount = requests.filter((request) => request.requester === memberId).length;
+        const activeCount = tasks.filter((task) => task.assignees.includes(memberId)).length;
+        const reviewCount = tasks.filter((task) => task.status === "reviewing" && task.assignees.includes(memberId)).length;
+        const relatedTags = [
+          ...tasks.filter((task) => task.assignees.includes(memberId)).flatMap((task) => task.tags),
+          ...requests.filter((request) => request.requester === memberId).flatMap((request) => request.tags),
+        ];
+        const tags = [...new Set(relatedTags)].slice(0, 3);
+        return (
+          <>
+            <div className="border-b border-[#e8eaed] p-4">
+              <div className="text-xs font-semibold text-[#5f6368]">.d works</div>
+              <div className="mt-3 flex items-center gap-3">
+                <Avatar id={memberId} size="md" />
+                <div className="min-w-0">
+                  <div className="truncate text-sm font-semibold text-[#202124]">{profile.name}</div>
+                  <div className="truncate text-xs text-[#5f6368]">{profile.role} / あわい事業</div>
+                </div>
+              </div>
+            </div>
+            <div className="p-3">
+              <div className="flex items-center gap-2 rounded-xl border border-[#ceead6] bg-[#e6f4ea] px-3 py-2 text-sm font-medium text-[#137333]">
+                <span className="h-2.5 w-2.5 rounded-full bg-[#34a853]" />
+                参加可能
+              </div>
+              <div className="mt-3 grid grid-cols-2 gap-2">
+                <div className="rounded-xl bg-[#f8fafd] p-3">
+                  <div className="text-xs font-medium text-[#5f6368]">助けたしごと</div>
+                  <div className="mt-1 text-2xl font-normal text-[#202124]">{helpedCount}</div>
+                </div>
+                <div className="rounded-xl bg-[#f8fafd] p-3">
+                  <div className="text-xs font-medium text-[#5f6368]">助けてもらった</div>
+                  <div className="mt-1 text-2xl font-normal text-[#202124]">{receivedCount}</div>
+                </div>
+              </div>
+              <div className="mt-3 space-y-2 text-sm text-[#3c4043]">
+                <div className="flex items-center justify-between rounded-xl px-2 py-1.5 hover:bg-[#f8fafd]">
+                  <span className="flex items-center gap-2"><Icon name="file" className="h-4 w-4 text-[#5f6368]" />担当中</span>
+                  <span className="font-medium">{activeCount}件</span>
+                </div>
+                <div className="flex items-center justify-between rounded-xl px-2 py-1.5 hover:bg-[#f8fafd]">
+                  <span className="flex items-center gap-2"><Icon name="search" className="h-4 w-4 text-[#5f6368]" />レビュー参加</span>
+                  <span className="font-medium">{reviewCount}件</span>
+                </div>
+              </div>
+              <div className="mt-3 flex flex-wrap gap-1.5">
+                {(tags.length ? tags : [profile.role]).map((tag) => <span key={tag} className="rounded-full bg-[#f1f3f4] px-2 py-1 text-xs font-medium text-[#5f6368]">{tag}</span>)}
+              </div>
+            </div>
+          </>
+        );
+      }
+
+      function ProfileMenu({ memberId }) {
+        return (
+          <div className="relative shrink-0">
+            <button
+              data-profile-id={memberId}
+              className="relative grid h-11 w-11 place-items-center rounded-full bg-white shadow-sm ring-1 ring-[#e8eaed] transition hover:bg-[#f8fafd] hover:shadow-[0_1px_6px_rgba(60,64,67,.24)]"
+              title="プロフィール"
+            >
+              <Avatar id={memberId} size="md" />
+              <span className="absolute bottom-1 right-1 h-3 w-3 rounded-full border-2 border-white bg-[#34a853]" />
+            </button>
+          </div>
+        );
+      }
+
+      function FloatingProfilePopover({ profile, tasks, requests }) {
+        if (!profile) return null;
+        return (
+          <div data-profile-popover className="fixed z-50 w-[320px] overflow-hidden rounded-2xl border border-[#dadce0] bg-white text-left shadow-[0_8px_20px_rgba(60,64,67,.18)]" style={{ left: `${profile.left}px`, top: `${profile.top}px` }}>
+            <ProfileStats memberId={profile.memberId} tasks={tasks} requests={requests} />
+          </div>
+        );
+      }
+
+      const reactionPalette = [
+        { key: "good", icon: "👍", label: "GOOD", tone: "border-[#d2e3fc] bg-[#e8f0fe] text-[#1967d2]" },
+        { key: "heart", icon: "❤️", label: "ハート", tone: "border-[#fad2cf] bg-[#fce8e6] text-[#c5221f]" },
+        { key: "thanks", icon: "🙏", label: "感謝", tone: "border-[#feefc3] bg-[#fef7e0] text-[#b06000]" },
+        { key: "eyes", icon: "👀", label: "確認", tone: "border-[#ceead6] bg-[#e6f4ea] text-[#137333]" },
+        { key: "clap", icon: "🙌", label: "応援", tone: "border-[#e9d2fd] bg-[#f3e8fd] text-[#8430ce]" },
+      ];
+
+      function commentReactionCount(total, commentCount, index) {
+        if (!total || !commentCount) return 0;
+        const base = Math.floor(total / commentCount);
+        const extra = total % commentCount;
+        return base + (index < extra ? 1 : 0);
+      }
+
+      function commentReactions(total, commentCount, index) {
+        const count = commentReactionCount(total, commentCount, index);
+        if (count <= 0) return [];
+        const first = reactionPalette[index % reactionPalette.length];
+        if (count === 1) return [{ ...first, count }];
+        const second = reactionPalette[(index + 2) % reactionPalette.length];
+        const firstCount = Math.ceil(count / 2);
+        return [
+          { ...first, count: firstCount },
+          { ...second, count: count - firstCount },
+        ].filter((reaction) => reaction.count > 0);
+      }
+
+      function CommentList({ task, ownedStampItems = [], onAddStamp }) {
+        const [expanded, setExpanded] = useState(false);
+        const [pickerIndex, setPickerIndex] = useState(null);
+        const fallbackBodies = [
+          "このワークの前提は確認済みです。次の担当者が判断しやすいように、未確定事項だけコメントに残してください。",
+          "内容は概ね問題ありません。公開・共有前に、数字や固有名詞だけ再確認したいです。",
+          "完了条件をもう少し具体化すると、AI側の次アクションに渡しやすくなります。",
+          "関係者に共有する前に、読み手が迷いそうな表現を1つ減らしたいです。",
+          "この方向で進められます。次回の更新では、判断理由も短く添えてください。",
+          "現場で使う前提なら、担当者名と期限も一緒に見えると運用しやすいです。",
+        ];
+        const explicitComments = task.comments || [];
+        const targetCount = Math.max(task.comments_count || 0, explicitComments.length);
+        const comments = Array.from({ length: targetCount }, (_, index) => {
+          if (explicitComments[index]) return explicitComments[index];
+          const author = task.assignees[index % task.assignees.length] || task.assignees[0];
+          return {
+            author,
+            timestamp: `6/1 ${String(11 + Math.floor(index / 2)).padStart(2, "0")}:${index % 2 === 0 ? "20" : "45"}`,
+            body: fallbackBodies[index % fallbackBodies.length],
+            thanks_count: Math.max(1, (task.thanks_count || 1) - index),
+          };
+        });
+        const visibleComments = expanded ? comments : comments.slice(0, 3);
+        const canExpand = comments.length > 3;
+        const stampOptions = ownedStampItems.flatMap((pack) => shopEmotes(pack).map((emote) => ({ ...emote, packId: pack.id, packName: pack.name }))).slice(0, 24);
+        const customReactions = task.comment_reactions || {};
+        const customPointTotal = Object.values(customReactions).flat().reduce((total, reaction) => total + (reaction.points || 0), 0);
+        const baselineThanks = Math.max(0, (task.thanks_count || 0) - customPointTotal);
+        return (
+          <Panel title={`コメント ${targetCount}`}>
+            {comments.length === 0 ? (
+              <div className="rounded-2xl bg-[#f8fafd] p-3 text-sm text-[#5f6368]">コメントはまだありません。</div>
+            ) : (
+              <>
+                <div className="space-y-3">
+                  {visibleComments.map((comment, index) => {
+                    const author = member(comment.author);
+                    const reactions = [
+                      ...commentReactions(baselineThanks, visibleComments.length, index),
+                      ...(customReactions[index] || []).map((reaction, reactionIndex) => ({
+                        key: `stamp-${reaction.packId}-${reaction.icon}-${reactionIndex}`,
+                        icon: reaction.icon,
+                        label: reaction.packName,
+                        count: reaction.points,
+                        tone: "border-[#dadce0] bg-white text-[#3c4043]",
+                      })),
+                    ];
+                    const pickerOpen = pickerIndex === index;
+                    return (
+                      <div key={`${task.id}-comment-${index}`} className="flex gap-3 rounded-2xl bg-[#f8fafd] p-3">
+                        <Avatar id={author.id} />
+                        <div className="min-w-0 flex-1">
+                          <div className="flex flex-wrap items-center gap-2">
+                            <span className="text-sm font-medium text-[#202124]">{author.name}</span>
+                            <span className="text-xs text-[#9aa0a6]">{comment.timestamp}</span>
+                          </div>
+                          <p className="mt-1 text-sm leading-6 text-[#3c4043]">{comment.body}</p>
+                          <div className="relative mt-2">
+                            <div className="flex flex-wrap items-center gap-1.5" aria-label={`${task.id} comment reactions`}>
+                              {reactions.map((reaction) => (
+                                <button
+                                  key={`${task.id}-${index}-${reaction.key}`}
+                                  data-reaction-count={reaction.count}
+                                  className={cn("inline-flex h-7 items-center gap-1 rounded-full border px-2 text-xs font-medium transition hover:brightness-95", reaction.tone)}
+                                  title={`${reaction.label} ${reaction.count}`}
+                                >
+                                  <span className="text-sm leading-none">{reaction.icon}</span>
+                                  <span>{reaction.count}</span>
+                                </button>
+                              ))}
+                              <button
+                                onClick={() => setPickerIndex((current) => current === index ? null : index)}
+                                className="inline-flex h-7 w-7 items-center justify-center rounded-full border border-[#dadce0] bg-white text-sm font-semibold text-[#5f6368] transition hover:bg-[#e8f0fe] hover:text-[#1967d2]"
+                                title="スタンプを追加"
+                              >
+                                +
+                              </button>
+                            </div>
+                            {pickerOpen && (
+                              <div className="absolute left-0 top-9 z-20 w-[286px] rounded-2xl border border-[#dadce0] bg-white p-3 shadow-[0_8px_20px_rgba(60,64,67,.18)]">
+                                <div className="mb-2 flex items-center justify-between gap-2">
+                                  <div className="text-xs font-semibold text-[#202124]">購入済みスタンプ</div>
+                                  <button onClick={() => setPickerIndex(null)} className="rounded-full px-2 py-0.5 text-xs font-medium text-[#5f6368] hover:bg-[#f1f3f4]">閉じる</button>
+                                </div>
+                                {stampOptions.length === 0 ? (
+                                  <div className="rounded-xl bg-[#f8fafd] p-3 text-xs leading-5 text-[#5f6368]">ストアでスタンプパックを購入すると、ここからコメントへ追加できます。</div>
+                                ) : (
+                                  <div className="grid grid-cols-6 gap-1.5">
+                                    {stampOptions.map((emote, emoteIndex) => (
+                                      <button
+                                        key={`${emote.packId}-${emote.icon}-${emoteIndex}`}
+                                        onClick={() => {
+                                          onAddStamp(task.id, index, emote);
+                                          setPickerIndex(null);
+                                        }}
+                                        className="relative grid h-9 place-items-center rounded-xl border border-[#e8eaed] bg-[#f8fafd] text-lg transition hover:border-[#d2e3fc] hover:bg-[#e8f0fe]"
+                                        title={`${emote.packName}: ${emote.points}Point追加`}
+                                      >
+                                        <span>{emote.icon}</span>
+                                        <span className="absolute bottom-0.5 right-0.5 rounded-full bg-[#5f6368] px-1 text-[9px] font-semibold leading-3 text-white">{emote.points}</span>
+                                      </button>
+                                    ))}
+                                  </div>
+                                )}
+                              </div>
+                            )}
+                          </div>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+                {canExpand && (
+                  <div className="mt-3 flex justify-end">
+                    <button onClick={() => setExpanded((value) => !value)} className="rounded-full px-3 py-1.5 text-sm font-medium text-[#1967d2] transition hover:bg-[#e8f0fe]">
+                      {expanded ? "閉じる" : "もっと見る"}
+                    </button>
+                  </div>
+                )}
+              </>
+            )}
+          </Panel>
+        );
+      }
+
+      function TaskCard({ task, selected, onSelect }) {
+        const meta = statusMeta[task.status];
+        const stale = hoursSince(task.updated_at) >= 72;
+        const extra = Math.max(0, task.assignees.length - 1);
+        return (
+          <button onClick={onSelect} className={cn("lift w-full rounded-2xl border border-l-4 bg-white p-3 text-left shadow-sm", meta.accent, selected ? "border-[#d2e3fc] shadow-[0_1px_8px_rgba(95,127,171,.18)]" : "border-[#e8eaed]", task.status === "blocked" ? "bg-[#fce8e6]/70" : "")}>
+            <div className="flex items-start justify-between gap-2">
+              <div className="min-w-0">
+                <div className="text-xs font-medium text-[#5f6368]">{task.id}</div>
+                <div className="mt-1 line-clamp-2 text-sm font-medium leading-5 text-[#202124]">{task.title}</div>
+              </div>
+              <Chip className={priorityMeta[task.priority].tone}>{task.priority}</Chip>
+            </div>
+            <div className="mt-3 flex flex-wrap gap-1.5">
+              <Chip className={meta.tone}>{meta.label}</Chip>
+              <Chip className="bg-[#f1f3f4] text-[#5f6368]">{ownerMeta[task.owner]}</Chip>
+            </div>
+            <div className="mt-3 line-clamp-3 text-xs leading-5 text-[#5f6368]">{task.handoff_note}</div>
+            <div className="mt-3 flex flex-wrap items-center justify-between gap-2 border-t border-[#f1f3f4] pt-2">
+              <div className="flex items-center gap-1" title={task.assignees.map((id) => member(id).name).join(", ")}>
+                <Avatar id={task.assignees[0]} />
+                {extra > 0 && <span className="text-xs font-medium text-[#5f6368]">+{extra}</span>}
+              </div>
+              <div className="flex shrink-0 items-center gap-2">
+                <SocialCount icon="heart" value={task.thanks_count} />
+                <SocialCount icon="message" value={task.comments_count} />
+              </div>
+            </div>
+            <div className="mt-2 flex items-start justify-between gap-2 text-xs text-[#9aa0a6]">
+              <WorkTagPreview tags={task.tags} />
+              <span className={cn("shrink-0 leading-6", stale ? "font-medium text-[#ea4335]" : "")}>{hoursSince(task.updated_at)}h前</span>
+            </div>
+          </button>
+        );
+      }
+
+      function Column({ status, tasks, selectedId, onSelect }) {
+        const meta = statusMeta[status];
+        return (
+          <div className="flex min-w-0 flex-col rounded-2xl border border-[#e8eaed] bg-[#f8fafd] p-2">
+            <div className="mb-2 flex items-center justify-between px-2 py-1.5">
+              <div className="flex items-center gap-2 text-sm font-medium text-[#3c4043]">
+                <Icon name={meta.icon} className="h-4 w-4 text-[#5f6368]" />
+                {meta.label}
+              </div>
+              <Chip className="bg-white text-[#5f6368] ring-1 ring-[#e8eaed]">{tasks.length}</Chip>
+            </div>
+            <div className="flex flex-col gap-2">
+              {tasks.map((task) => <TaskCard key={task.id} task={task} selected={selectedId === task.id} onSelect={() => onSelect(task.id)} />)}
+              {tasks.length === 0 && <div className="rounded-2xl border border-dashed border-[#dadce0] bg-white/50 p-4 text-center text-xs text-[#9aa0a6]">空です</div>}
+            </div>
+          </div>
+        );
+      }
+
+      function ViewModeSwitch({ viewMode, onChange }) {
+        const modes = [
+          { key: "board", label: "ボード", icon: "filter", title: "カンバン表示" },
+          { key: "list", label: "リスト", icon: "list", title: "リスト表示" },
+          { key: "gantt", label: "ガント", icon: "timeline", title: "ガント表示" },
+          { key: "shop", label: "ストア", icon: "shop", title: "協力者・場所・スタンプを購入" },
+        ];
+        return (
+          <div className="flex shrink-0 items-center gap-1 rounded-full border border-[#dadce0] bg-white p-1">
+            {modes.map((mode) => (
+              <button
+                key={mode.key}
+                title={mode.title}
+                onClick={() => onChange(mode.key)}
+                className={cn(
+                  "inline-flex h-9 items-center gap-2 rounded-full px-3 text-sm font-medium transition",
+                  viewMode === mode.key ? "bg-[#e8f0fe] text-[#1967d2]" : "text-[#5f6368] hover:bg-[#f8fafd] hover:text-[#202124]"
+                )}
+              >
+                <Icon name={mode.icon} className="h-4 w-4" />
+                <span>{mode.label}</span>
+              </button>
+            ))}
+          </div>
+        );
+      }
+
+      function CollaboratorStack({ assignees }) {
+        const visible = assignees.slice(0, 3);
+        const extra = Math.max(0, assignees.length - visible.length);
+        return (
+          <div className="flex items-center">
+            <div className="flex -space-x-2">{visible.map((id) => <Avatar key={id} id={id} />)}</div>
+            {extra > 0 && <span className="ml-1 text-xs font-medium text-[#5f6368]">+{extra}</span>}
+          </div>
+        );
+      }
+
+      function ListView({ tasks, selectedId, onSelect }) {
+        if (tasks.length === 0) {
+          return <div className="mt-4 rounded-2xl border border-dashed border-[#dadce0] bg-[#f8fafd] p-8 text-center text-sm text-[#5f6368]">該当ワークがありません。</div>;
+        }
+        return (
+          <div className="mt-4 overflow-hidden rounded-2xl border border-[#e8eaed]">
+            <div className="flex flex-wrap items-center justify-between gap-2 border-b border-[#e8eaed] bg-[#f8fafd] px-4 py-3">
+              <div>
+                <div className="text-sm font-medium text-[#202124]">リスト</div>
+                <div className="text-xs text-[#5f6368]">Asanaのリストを踏襲し、期日・作成者・最終更新・反応を追加表示</div>
+              </div>
+              <Chip className="bg-white text-[#5f6368] ring-1 ring-[#e8eaed]">{tasks.length}件</Chip>
+            </div>
+            <div className="overflow-x-auto">
+              <table className="min-w-[1700px] table-fixed border-collapse text-left text-sm">
+                <thead className="bg-white text-xs font-medium text-[#5f6368]">
+                  <tr className="border-b border-[#e8eaed]">
+                    <th className="w-[520px] px-4 py-3">ワーク名</th>
+                    <th className="w-[160px] px-3 py-3">担当</th>
+                    <th className="w-[120px] px-3 py-3">期日</th>
+                    <th className="w-[100px] px-3 py-3">優先度</th>
+                    <th className="w-[140px] px-3 py-3">ステータス</th>
+                    <th className="w-[130px] px-3 py-3">コラボレーター</th>
+                    <th className="w-[150px] px-3 py-3">作成者</th>
+                    <th className="w-[110px] px-3 py-3">作成日</th>
+                    <th className="w-[150px] px-3 py-3">最終更新</th>
+                    <th className="w-[120px] px-3 py-3">反応</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {tasks.map((task) => {
+                    const meta = statusMeta[task.status];
+                    const creator = taskCreator(task);
+                    const lead = member(task.assignees[0]);
+                    return (
+                      <tr
+                        key={task.id}
+                        onClick={() => onSelect(task.id)}
+                        className={cn("cursor-pointer border-b border-[#f1f3f4] bg-white transition hover:bg-[#f8fafd]", selectedId === task.id ? "bg-[#e8f0fe]/60" : "")}
+                      >
+                        <td className="px-4 py-3">
+                          <div className="min-w-0 pr-4">
+                            <div className="line-clamp-1 text-[15px] font-normal leading-6 text-[#202124]">{task.title}</div>
+                            <div className="mt-1 line-clamp-2 max-w-[500px] text-xs leading-5 text-[#5f6368]">{task.handoff_note}</div>
+                          </div>
+                        </td>
+                        <td className="px-3 py-3">
+                          <div className="flex items-center gap-2"><Avatar id={lead.id} /><span className="truncate text-[#3c4043]">{lead.name}</span></div>
+                        </td>
+                        <td className={cn("px-3 py-3 font-medium", dueTone(task))}>{formatDate(taskDueDate(task))}</td>
+                        <td className="px-3 py-3"><Chip className={priorityMeta[task.priority].tone}>{task.priority}</Chip></td>
+                        <td className="px-3 py-3"><Chip className={meta.tone}>{meta.label}</Chip></td>
+                        <td className="px-3 py-3"><CollaboratorStack assignees={task.assignees} /></td>
+                        <td className="px-3 py-3">
+                          <div className="flex items-center gap-2"><Avatar id={creator.id} /><span className="truncate text-[#3c4043]">{creator.name}</span></div>
+                        </td>
+                        <td className="px-3 py-3 text-[#5f6368]">{formatDate(task.created_at)}</td>
+                        <td className="px-3 py-3 text-[#5f6368]">{formatTime(task.updated_at)}</td>
+                        <td className="px-3 py-3">
+                          <div className="flex items-center gap-3">
+                            <SocialCount icon="heart" value={task.thanks_count} />
+                            <SocialCount icon="message" value={task.comments_count} />
+                          </div>
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        );
+      }
+
+      function GanttView({ tasks, selectedId, onSelect }) {
+        const dayWidth = 44;
+        const timelineDays = 28;
+        const baseDate = tasks.length
+          ? addDays(new Date(Math.min(...tasks.map((task) => taskStartDate(task).getTime()))), -1)
+          : addDays(now, -7);
+        const days = Array.from({ length: timelineDays }, (_, index) => addDays(baseDate, index));
+        const timelineWidth = dayWidth * timelineDays;
+        if (tasks.length === 0) {
+          return <div className="mt-4 rounded-2xl border border-dashed border-[#dadce0] bg-[#f8fafd] p-8 text-center text-sm text-[#5f6368]">該当ワークがありません。</div>;
+        }
+        return (
+          <div className="mt-4 overflow-hidden rounded-2xl border border-[#e8eaed]">
+            <div className="flex flex-wrap items-center justify-between gap-3 border-b border-[#e8eaed] bg-[#f8fafd] px-4 py-3">
+              <div>
+                <div className="text-sm font-medium text-[#202124]">ガント</div>
+                <div className="text-xs text-[#5f6368]">開始日は作成日、期日は優先度と進捗から推論。バークリックで詳細を表示</div>
+              </div>
+              <div className="flex flex-wrap items-center gap-2 text-xs text-[#5f6368]">
+                <Chip className="bg-white text-[#5f6368] ring-1 ring-[#e8eaed]">{formatDate(days[0])} - {formatDate(days[days.length - 1])}</Chip>
+                <span className="inline-flex items-center gap-1"><span className="h-2.5 w-4 rounded-full bg-[#e8f0fe] ring-1 ring-[#d2e3fc]" />通常</span>
+                <span className="inline-flex items-center gap-1"><span className="h-2.5 w-4 rounded-full bg-[#fef7e0] ring-1 ring-[#feefc3]" />人間確認</span>
+                <span className="inline-flex items-center gap-1"><span className="h-2.5 w-4 rounded-full bg-[#fce8e6] ring-1 ring-[#fad2cf]" />停滞</span>
+              </div>
+            </div>
+            <div className="overflow-x-auto">
+              <div className="min-w-[1180px]">
+                <div className="grid border-b border-[#e8eaed] text-xs font-medium text-[#5f6368]" style={{ gridTemplateColumns: `560px ${timelineWidth}px` }}>
+                  <div className="sticky left-0 z-10 grid grid-cols-[1fr_92px_72px] gap-2 bg-white px-4 py-3 shadow-[1px_0_0_#e8eaed]">
+                    <span>ワーク名</span>
+                    <span>期日</span>
+                    <span>期間</span>
+                  </div>
+                  <div className="grid bg-white" style={{ gridTemplateColumns: `repeat(${timelineDays}, ${dayWidth}px)` }}>
+                    {days.map((day) => (
+                      <div key={day.toISOString()} className={cn("border-l border-[#f1f3f4] px-1 py-3 text-center", day.getDay() === 0 || day.getDay() === 6 ? "bg-[#f8fafd]" : "")}>{formatDate(day)}</div>
+                    ))}
+                  </div>
+                </div>
+                {tasks.map((task) => {
+                  const meta = statusMeta[task.status];
+                  const startOffset = Math.max(0, daysBetween(baseDate, taskStartDate(task)));
+                  const duration = Math.min(timelineDays - startOffset, Math.max(1, taskDurationDays(task)));
+                  const ganttTone = {
+                    "needs-ai": "bg-[#e8f0fe] text-[#1967d2] ring-[#d2e3fc]",
+                    "needs-human": "bg-[#fef7e0] text-[#b06000] ring-[#feefc3]",
+                    "in-progress": "bg-[#e6f4ea] text-[#137333] ring-[#ceead6]",
+                    reviewing: "bg-[#f3e8fd] text-[#8430ce] ring-[#e9d2fd]",
+                    done: "bg-[#f1f3f4] text-[#5f6368] ring-[#e8eaed]",
+                    blocked: "bg-[#fce8e6] text-[#c5221f] ring-[#fad2cf]",
+                  }[task.status] || "bg-[#e8f0fe] text-[#1967d2] ring-[#d2e3fc]";
+                  return (
+                    <div
+                      key={task.id}
+                      onClick={() => onSelect(task.id)}
+                      className={cn("grid min-h-[84px] cursor-pointer border-b border-[#f1f3f4] bg-white transition hover:bg-[#f8fafd]", selectedId === task.id ? "bg-[#e8f0fe]/60" : "")}
+                      style={{ gridTemplateColumns: `560px ${timelineWidth}px` }}
+                    >
+                      <div className="sticky left-0 z-10 grid grid-cols-[1fr_92px_72px] items-center gap-2 bg-inherit px-4 py-3 shadow-[1px_0_0_#e8eaed]">
+                        <div className="min-w-0 pr-4">
+                          <div className="line-clamp-1 text-[15px] font-normal leading-6 text-[#202124]" title={task.title}>{task.title}</div>
+                          <div className="mt-1 line-clamp-2 max-w-[410px] text-xs leading-5 text-[#5f6368]" title={task.handoff_note}>{task.handoff_note}</div>
+                        </div>
+                        <span className={cn("text-sm font-medium", dueTone(task))}>{formatDate(taskDueDate(task))}</span>
+                        <span className="text-sm text-[#5f6368]">{taskDurationDays(task)}日</span>
+                      </div>
+                      <div className="relative" style={{ width: `${timelineWidth}px` }}>
+                        <div className="absolute inset-0 grid" style={{ gridTemplateColumns: `repeat(${timelineDays}, ${dayWidth}px)` }}>
+                          {days.map((day) => <div key={`${task.id}-${day.toISOString()}`} className={cn("border-l border-[#f1f3f4]", day.getDay() === 0 || day.getDay() === 6 ? "bg-[#f8fafd]" : "")} />)}
+                        </div>
+                        <div
+                          className={cn("absolute top-7 h-6 rounded-full shadow-sm ring-1", ganttTone)}
+                          style={{ left: `${startOffset * dayWidth + 8}px`, width: `${Math.max(36, duration * dayWidth - 12)}px` }}
+                          title={`${task.title}: ${formatDate(taskStartDate(task))} - ${formatDate(taskDueDate(task))}`}
+                        />
+                        <div className={cn("absolute top-[30px] truncate px-3 text-xs font-medium", ganttTone.split(" ").find((token) => token.startsWith("text-")))} style={{ left: `${startOffset * dayWidth + 8}px`, width: `${Math.max(36, duration * dayWidth - 12)}px` }}>
+                          {duration >= 3 ? task.title : ""}
+                        </div>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          </div>
+        );
+      }
+
+      function ShopView({ query, selectedTask, ownedItems, onPurchase, onSendStamp }) {
+        const tabs = [
+          { key: "skills", label: "スキル", description: "専門家・共同作業者を召喚" },
+          { key: "commons", label: "コモンズ", description: "場所・素材・自然資源を予約" },
+          { key: "stamps", label: "スタンプ", description: "1,000Pointの感謝パック" },
+        ];
+        const sortOptionsByType = {
+          skills: [
+            { key: "fit", label: "適合" },
+            { key: "price", label: "価格" },
+            { key: "rating", label: "評価" },
+            { key: "likes", label: "♡" },
+            { key: "reviews", label: "レビュー" },
+          ],
+          commons: [
+            { key: "fit", label: "適合" },
+            { key: "price", label: "価格" },
+            { key: "capacity", label: "定員" },
+            { key: "rating", label: "評価" },
+            { key: "likes", label: "♡" },
+          ],
+          stamps: [
+            { key: "likes", label: "人気" },
+            { key: "price", label: "価格" },
+            { key: "rating", label: "評価" },
+            { key: "points", label: "Point" },
+            { key: "reviews", label: "レビュー" },
+          ],
+        };
+        const [activeType, setActiveType] = useState("skills");
+        const [sort, setSort] = useState({ key: "fit", dir: "desc" });
+        const [selectedItemId, setSelectedItemId] = useState(shopCatalog.skills[0].id);
+        const queryText = query.trim().toLowerCase();
+        const items = shopCatalog[activeType] || [];
+        function numericText(value) {
+          const matched = String(value || "").match(/\d+/);
+          return matched ? Number(matched[0]) : 0;
+        }
+        function sortValue(item, key) {
+          if (key === "price") return item.price;
+          if (key === "rating") return item.rating;
+          if (key === "likes") return item.likes;
+          if (key === "reviews") return item.reviews;
+          if (key === "fit") return item.fit;
+          if (key === "capacity") return numericText(item.capacity);
+          if (key === "points") return stampPointTotal(item);
+          return item.name;
+        }
+        function changeType(key) {
+          setActiveType(key);
+          setSelectedItemId(shopCatalog[key][0]?.id || "");
+          setSort({ key: key === "stamps" ? "likes" : "fit", dir: "desc" });
+        }
+        function toggleSort(key) {
+          setSort((current) => current.key === key ? { key, dir: current.dir === "asc" ? "desc" : "asc" } : { key, dir: key === "price" ? "asc" : "desc" });
+        }
+        const visibleItems = items
+          .filter((item) => {
+            if (!queryText) return true;
+            return `${item.name} ${item.subtitle} ${item.provider} ${item.location} ${item.tags.join(" ")} ${item.review}`.toLowerCase().includes(queryText);
+          })
+          .sort((a, b) => {
+            const av = sortValue(a, sort.key);
+            const bv = sortValue(b, sort.key);
+            if (typeof av === "string") return sort.dir === "asc" ? av.localeCompare(bv) : bv.localeCompare(av);
+            return sort.dir === "asc" ? av - bv : bv - av;
+          });
+        const selectedItem = items.find((item) => item.id === selectedItemId) || visibleItems[0] || items[0];
+        const activeTab = tabs.find((tab) => tab.key === activeType);
+
+        return (
+          <div className="mt-4 min-h-[720px]">
+            <div className="rounded-2xl border border-[#e8eaed] bg-[#f8fafd] p-3">
+              <div className="flex flex-col gap-3 xl:flex-row xl:items-center xl:justify-between">
+                <div>
+                  <div className="flex items-center gap-2 text-sm font-semibold text-[#202124]"><Icon name="shop" className="h-4 w-4 text-[#1a73e8]" />ストア</div>
+                  <div className="mt-1 text-xs leading-5 text-[#5f6368]">
+                    {activeTab.description}。現在の適用先: <span className="font-medium text-[#202124]">{selectedTask ? `${selectedTask.id} ${selectedTask.title}` : "ワーク未選択"}</span>
+                  </div>
+                </div>
+                <div className="flex flex-wrap items-center gap-2">
+                  {tabs.map((tab) => (
+                    <button
+                      key={tab.key}
+                      onClick={() => changeType(tab.key)}
+                      className={cn(
+                        "inline-flex h-10 items-center gap-2 rounded-full border px-4 text-sm font-medium transition",
+                        activeType === tab.key ? "border-[#d2e3fc] bg-[#e8f0fe] text-[#1967d2]" : "border-[#dadce0] bg-white text-[#5f6368] hover:bg-[#f8fafd]"
+                      )}
+                    >
+                      {tab.label}
+                      <span className="rounded-full bg-white px-2 py-0.5 text-xs text-[#5f6368]">{shopCatalog[tab.key].length}</span>
+                    </button>
+                  ))}
+                </div>
+              </div>
+              <div className="mt-3 flex flex-wrap items-center gap-2 border-t border-[#e8eaed] pt-3">
+                <span className="text-xs font-medium text-[#5f6368]">並び替え</span>
+                {sortOptionsByType[activeType].map((option) => (
+                  <SortButton key={option.key} option={option} sort={sort} onClick={() => toggleSort(option.key)} />
+                ))}
+              </div>
+            </div>
+
+            <div className="mt-3 grid gap-3 xl:grid-cols-[minmax(0,1fr)_380px]">
+              <div className="overflow-hidden rounded-2xl border border-[#e8eaed] bg-white">
+                <div className="overflow-x-auto">
+                  <table className="min-w-[1440px] table-fixed border-collapse text-left text-sm">
+                    <thead className="bg-white text-xs font-medium text-[#5f6368]">
+                      <tr className="border-b border-[#e8eaed]">
+                        <th className="w-[390px] px-4 py-3">{activeType === "commons" ? "場所・資源" : activeType === "stamps" ? "パック" : "スキルセット"}</th>
+                        <th className="w-[190px] px-3 py-3">{activeType === "skills" ? "名前" : activeType === "stamps" ? "Original" : "提供元"}</th>
+                        <th className="w-[260px] px-3 py-3">{activeType === "commons" ? "用途・設備" : activeType === "stamps" ? "テーマ" : "専門スキル"}</th>
+                        <th className="w-[130px] px-3 py-3">価格</th>
+                        <th className="w-[130px] px-3 py-3">{activeType === "commons" ? "予約単位" : activeType === "stamps" ? "Point" : "期間"}</th>
+                        <th className="w-[140px] px-3 py-3">{activeType === "commons" ? "定員" : activeType === "stamps" ? "内容" : "稼働時間"}</th>
+                        <th className="w-[170px] px-3 py-3">評価・信頼度（%）</th>
+                        <th className="w-[168px] px-3 py-3">操作</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {visibleItems.map((item, index) => (
+                        <ShopRow
+                          key={item.id}
+                          item={item}
+                          promoted={index === 0}
+                          active={selectedItem?.id === item.id}
+                          owned={ownedItems.includes(item.id)}
+                          onSelect={() => setSelectedItemId(item.id)}
+                          onPurchase={onPurchase}
+                        />
+                      ))}
+                    </tbody>
+                  </table>
+                  {visibleItems.length === 0 && (
+                    <div className="p-8 text-center text-sm text-[#5f6368]">該当するストア商品がありません。</div>
+                  )}
+                </div>
+              </div>
+              <ShopDetailPanel
+                item={selectedItem}
+                selectedTask={selectedTask}
+                owned={selectedItem ? ownedItems.includes(selectedItem.id) : false}
+                onPurchase={onPurchase}
+                onSendStamp={onSendStamp}
+              />
+            </div>
+          </div>
+        );
+      }
+
+      function SortButton({ option, sort, onClick }) {
+        const active = sort.key === option.key;
+        return (
+          <button
+            onClick={onClick}
+            className={cn(
+              "inline-flex h-8 items-center gap-1 rounded-full border px-3 text-xs font-medium transition",
+              active ? "border-[#d2e3fc] bg-white text-[#1967d2]" : "border-[#dadce0] bg-white text-[#5f6368] hover:bg-[#f8fafd]"
+            )}
+            title={`${option.label}で${active && sort.dir === "asc" ? "降順" : "昇順"}に並び替え`}
+          >
+            {option.label}
+            <span className="text-[10px]">{active ? (sort.dir === "asc" ? "▲" : "▼") : "↕"}</span>
+          </button>
+        );
+      }
+
+      function ShopRow({ item, active, owned, promoted, onSelect, onPurchase }) {
+        const isStamp = item.type === "stamps";
+        const isSkill = item.type === "skills";
+        const titleBadges = [...(promoted ? ["PR"] : []), ...(item.badges || [])];
+        return (
+          <tr onClick={onSelect} className={cn("cursor-pointer border-b border-[#f1f3f4] transition hover:bg-[#f8fafd]", active ? "bg-[#e8f0fe]/60" : "bg-white")}>
+            <td className="px-4 py-3">
+              <div className="flex min-w-0 items-center gap-3">
+                <img src={item.avatar} alt={item.provider} className={cn("h-12 w-12 shrink-0 object-cover ring-2 ring-white", isSkill ? "rounded-full" : "rounded-xl")} />
+                <div className="min-w-0">
+                  <div className="flex min-w-0 items-center gap-2">
+                    <div className="line-clamp-1 font-medium leading-6 text-[#202124]">{item.name}</div>
+                    {titleBadges.map((badge) => (
+                      <span key={badge} className={cn(
+                        "shrink-0 rounded-full px-2 py-0.5 text-[11px] font-semibold ring-1",
+                        badge === "PR" ? "bg-[#fef7e0] text-[#b06000] ring-[#fdd663]" : "bg-[#e8f0fe] text-[#1967d2] ring-[#d2e3fc]"
+                      )}>{badge}</span>
+                    ))}
+                  </div>
+                  <div className="line-clamp-1 text-xs text-[#5f6368]">{item.verified} / {item.response}</div>
+                  <div className="mt-1 flex flex-wrap gap-1">{item.tags.slice(0, 3).map((tag) => <span key={tag} className="rounded-full bg-[#f1f3f4] px-2 py-0.5 text-[11px] font-medium text-[#5f6368]">{tag}</span>)}</div>
+                </div>
+              </div>
+            </td>
+            <td className="px-3 py-3">
+              <div className="line-clamp-2 text-sm font-medium leading-5 text-[#3c4043]">{item.provider}</div>
+            </td>
+            <td className="px-3 py-3">
+              <div className="line-clamp-2 leading-5 text-[#3c4043]">{item.subtitle}</div>
+              <div className="mt-1 line-clamp-1 text-xs text-[#5f6368]">{item.experience || item.location}</div>
+            </td>
+            <td className="px-3 py-3 font-semibold text-[#202124]">{formatYen(item.price)}</td>
+            <td className="px-3 py-3 text-[#3c4043]">{isStamp ? `${stampPointTotal(item).toLocaleString()}P` : item.unit}</td>
+            <td className="px-3 py-3 text-[#3c4043]">{item.capacity}</td>
+            <td className="px-3 py-3">
+              <div className="flex flex-wrap items-center gap-2">
+                <span className="inline-flex items-center gap-1 text-xs font-medium text-[#5f6368]"><Icon name="star" className="h-3.5 w-3.5 text-[#fbbc04]" />{item.rating}</span>
+                <SocialCount icon="heart" value={item.likes} />
+                <span className="rounded-full bg-[#e6f4ea] px-2 py-0.5 text-xs font-medium text-[#137333]">{item.fit}%</span>
+              </div>
+            </td>
+            <td className="px-3 py-3">
+              <button
+                onClick={(event) => {
+                  event.stopPropagation();
+                  onPurchase(item);
+                }}
+                className={cn(
+                  "inline-flex h-9 min-w-[132px] items-center justify-center gap-1.5 whitespace-nowrap rounded-full px-3 text-[11px] font-medium transition",
+                  owned ? "bg-[#e6f4ea] text-[#137333]" : "bg-[#1a73e8] text-white shadow-sm hover:bg-[#1967d2]"
+                )}
+              >
+                <Icon name={owned ? "check" : "shop"} className="h-3.5 w-3.5 shrink-0" />
+                {owned ? "購入済み" : item.type === "stamps" ? "パック購入" : "購入して適用"}
+              </button>
+            </td>
+          </tr>
+        );
+      }
+
+      function ShopDetailPanel({ item, selectedTask, owned, onPurchase, onSendStamp }) {
+        if (!item) {
+          return <div className="rounded-2xl border border-[#e8eaed] bg-white p-4 text-sm text-[#5f6368]">詳細を表示する商品がありません。</div>;
+        }
+        const isStamp = item.type === "stamps";
+        const isSkill = item.type === "skills";
+        const emotes = shopEmotes(item);
+        const detailSections = shopDetailSections(item);
+        return (
+          <aside className="rounded-2xl border border-[#e8eaed] bg-white p-4">
+            <div className="flex items-start gap-3">
+              <img src={item.avatar} alt={item.provider} className={cn("h-14 w-14 object-cover ring-2 ring-white", isSkill ? "rounded-full" : "rounded-xl")} />
+              <div className="min-w-0 flex-1">
+                <div className="text-xs font-medium text-[#5f6368]">{item.provider}</div>
+                <h3 className="mt-1 text-lg font-normal leading-7 text-[#202124]">{item.name}</h3>
+                <p className="mt-1 text-sm leading-6 text-[#5f6368]">{item.subtitle}</p>
+              </div>
+            </div>
+            <div className="mt-4 grid grid-cols-2 gap-2">
+              <ShopMiniMetric label="価格" value={formatYen(item.price)} />
+              <ShopMiniMetric label={isStamp ? "Point" : "期間/単位"} value={isStamp ? `${stampPointTotal(item).toLocaleString()}P` : item.unit} />
+              <ShopMiniMetric label={isStamp ? "Emote" : "稼働/定員"} value={item.capacity} />
+              <ShopMiniMetric label="評価" value={`${item.rating} / ${item.reviews}件`} />
+            </div>
+            <div className="mt-4 rounded-2xl bg-[#f8fafd] p-3">
+              <div className="flex items-center justify-between gap-2">
+                <span className="text-xs font-medium text-[#5f6368]">選択中ワーク</span>
+                <span className="rounded-full bg-white px-2 py-0.5 text-xs font-medium text-[#5f6368]">{selectedTask?.id || "未選択"}</span>
+              </div>
+              <div className="mt-1 line-clamp-2 text-sm leading-6 text-[#202124]">{selectedTask?.title || "適用先のワークを選択してください。"}</div>
+            </div>
+            <div className="mt-4 flex flex-wrap gap-1.5">
+              {item.tags.map((tag) => <span key={tag} className="rounded-full bg-[#f1f3f4] px-2 py-1 text-xs font-medium text-[#5f6368]">{tag}</span>)}
+            </div>
+            {item.officialLinks?.length > 0 && (
+              <div className="mt-4 rounded-2xl border border-[#e8eaed] bg-[#f8fafd] p-3">
+                <div className="mb-2 text-xs font-medium text-[#5f6368]">公式情報</div>
+                <div className="space-y-2">
+                  {item.officialLinks.map((link) => (
+                    <a
+                      key={`${link.kind}-${link.url}`}
+                      href={link.url}
+                      target="_blank"
+                      rel="noreferrer"
+                      className="block rounded-xl border border-[#e8eaed] bg-white px-3 py-2 transition hover:border-[#d2e3fc] hover:bg-[#f8fafd]"
+                    >
+                      <div className="flex items-center gap-2">
+                        <span className={cn(
+                          "shrink-0 rounded-full px-2 py-0.5 text-[11px] font-medium",
+                          link.kind === "SNS" ? "bg-[#f3e8fd] text-[#8430ce]" : "bg-[#e8f0fe] text-[#1967d2]"
+                        )}>{link.kind}</span>
+                        <span className="min-w-0 truncate text-sm font-medium text-[#202124]">{link.label}</span>
+                      </div>
+                      <div className="mt-1 break-all text-xs leading-5 text-[#5f6368]">{link.url}</div>
+                    </a>
+                  ))}
+                </div>
+              </div>
+            )}
+            <div className="mt-4 space-y-2">
+              {detailSections.map((section) => (
+                <div key={`${section.label}-${section.body}`} className="rounded-2xl border border-[#e8eaed] bg-white p-3">
+                  <div className="text-xs font-medium text-[#5f6368]">{section.label}</div>
+                  <p className="mt-2 text-sm leading-6 text-[#3c4043]">{section.body}</p>
+                </div>
+              ))}
+            </div>
+            <div className="mt-4 rounded-2xl border border-[#e8eaed] bg-[#f8fafd] p-3">
+              <div className="flex items-center gap-2 text-xs font-medium text-[#5f6368]"><Icon name="heart" className="h-3.5 w-3.5" />レビューコメント</div>
+              <p className="mt-2 text-sm leading-6 text-[#3c4043]">{item.review}</p>
+            </div>
+            {isStamp && <StampPointGrid emotes={emotes} owned={owned} onSend={(emote) => onSendStamp(item, emote)} />}
+            <button
+              onClick={() => onPurchase(item)}
+              className={cn(
+                "mt-4 inline-flex h-11 w-full items-center justify-center gap-1.5 whitespace-nowrap rounded-full px-4 text-[13px] font-medium transition",
+                owned ? "bg-[#e6f4ea] text-[#137333]" : "bg-[#1a73e8] text-white shadow-sm hover:bg-[#1967d2]"
+              )}
+            >
+              <Icon name={owned ? "check" : "shop"} className="h-3.5 w-3.5 shrink-0" />
+              {owned ? "このプロジェクトで利用可能" : isStamp ? "1,000円でパック購入" : "購入して現在のワークに適用"}
+            </button>
+          </aside>
+        );
+      }
+
+      function ShopMiniMetric({ label, value }) {
+        return (
+          <div className="rounded-xl bg-[#f8fafd] p-3">
+            <div className="text-[11px] font-medium text-[#5f6368]">{label}</div>
+            <div className="mt-1 truncate text-sm font-semibold text-[#202124]">{value}</div>
+          </div>
+        );
+      }
+
+      function StampPointGrid({ emotes, owned, onSend }) {
+        return (
+          <div className="mt-4">
+            <div className="mb-2 flex items-center justify-between gap-2">
+              <div className="text-xs font-medium text-[#5f6368]">Emote Point</div>
+              <div className="rounded-full bg-[#f1f3f4] px-2 py-0.5 text-xs font-medium text-[#5f6368]">合計 {emotes.reduce((total, emote) => total + emote.points, 0).toLocaleString()}P</div>
+            </div>
+            <div className="grid grid-cols-5 gap-1.5">
+              {emotes.map((emote, index) => (
+                <button
+                  key={`${emote.icon}-${index}`}
+                  disabled={!owned}
+                  onClick={() => onSend(emote)}
+                  className={cn(
+                    "relative grid h-14 place-items-center rounded-xl border pt-1 text-lg transition",
+                    owned ? "border-[#d2e3fc] bg-white hover:bg-[#e8f0fe]" : "cursor-not-allowed border-[#e8eaed] bg-[#f8fafd] opacity-60"
+                  )}
+                  title={owned ? `${emote.points}Point送る` : "購入後に送信できます"}
+                >
+                  <span>{emote.icon}</span>
+                  <span className="absolute bottom-1 right-1 rounded-full bg-[#5f6368] px-1.5 py-0.5 text-[10px] font-semibold leading-none text-white">{emote.points}</span>
+                  <span className={cn("absolute bottom-1 left-1 text-[10px] font-medium leading-none", owned ? "text-[#1967d2]" : "text-[#5f6368]")}>{owned ? "送る" : "購入後"}</span>
+                </button>
+              ))}
+            </div>
+          </div>
+        );
+      }
+
+      function Panel({ title, children, danger = false }) {
+        return (
+          <section className={cn("rounded-2xl border p-3", danger ? "border-[#fad2cf] bg-[#fce8e6]" : "border-[#e8eaed] bg-white")}>
+            <div className="mb-2 text-xs font-medium uppercase tracking-normal text-[#5f6368]">{title}</div>
+            {children}
+          </section>
+        );
+      }
+
+      function AttachmentInput({ inputId, onFiles }) {
+        return (
+          <input
+            id={inputId}
+            type="file"
+            multiple
+            className="hidden"
+            onChange={(event) => {
+              const files = Array.from(event.target.files || []);
+              if (files.length) onFiles(files);
+              event.target.value = "";
+            }}
+          />
+        );
+      }
+
+      function AttachmentAddButton({ inputId, compact = false }) {
+        return (
+          <label
+            htmlFor={inputId}
+            className={cn(
+              "inline-flex cursor-pointer items-center justify-center rounded-full border border-[#dadce0] bg-white font-medium text-[#3c4043] shadow-sm transition hover:border-[#d2e3fc] hover:bg-[#f8fafd] hover:text-[#1967d2]",
+              compact ? "gap-1 px-3 py-1.5 text-xs" : "gap-1 px-3 py-2 text-xs"
+            )}
+          >
+            <Icon name="plus" className="h-3.5 w-3.5" />
+            ファイルを追加
+          </label>
+        );
+      }
+
+      function TaskAttachments({ task, onAddFiles, onRemoveFile }) {
+        const attachments = task.attachments || [];
+        const inputId = `attachment-input-${task.id}`;
+        return (
+          <Panel title="添付ファイル">
+            <AttachmentInput inputId={inputId} onFiles={onAddFiles} />
+            {attachments.length === 0 ? (
+              <div className="rounded-xl border border-dashed border-[#dadce0] bg-[#f8fafd] px-2.5 py-2">
+                <div className="flex items-center gap-2">
+                  <div className="grid h-8 w-8 shrink-0 place-items-center rounded-xl bg-white text-[#1967d2] ring-1 ring-[#d2e3fc]">
+                    <Icon name="file" className="h-4 w-4" />
+                  </div>
+                  <p className="min-w-0 flex-1 text-xs leading-5 text-[#5f6368]">議事録、見積、画像、参考資料などを紐づけます。</p>
+                  <div className="shrink-0">
+                    <AttachmentAddButton inputId={inputId} compact />
+                  </div>
+                </div>
+              </div>
+            ) : (
+              <div className="space-y-2">
+                <div className="space-y-2">
+                  {attachments.map((file) => (
+                    <div key={file.id} className="flex items-center gap-2 rounded-xl border border-[#e8eaed] bg-[#f8fafd] p-2">
+                      <div className="group relative grid h-10 w-10 shrink-0 place-items-center rounded-xl bg-white text-[#1967d2] ring-1 ring-[#d2e3fc]">
+                        <Icon name="file" className="h-4 w-4" />
+                        <button
+                          type="button"
+                          onClick={() => onRemoveFile(file.id)}
+                          className="absolute -right-2 top-1/2 grid h-6 w-6 -translate-y-1/2 place-items-center rounded-full bg-white text-sm font-semibold leading-none text-[#5f6368] opacity-0 shadow-sm ring-1 ring-[#dadce0] transition group-hover:opacity-100 focus:opacity-100 hover:bg-[#fce8e6] hover:text-[#c5221f] hover:ring-[#fad2cf]"
+                          title={`${file.name} を削除`}
+                          aria-label={`${file.name} を削除`}
+                        >
+                          ×
+                        </button>
+                      </div>
+                      <div className="min-w-0 flex-1">
+                        <div className="line-clamp-1 text-sm font-medium text-[#202124]" title={file.name}>{file.name}</div>
+                        <div className="mt-1 flex flex-wrap items-center gap-1.5 text-xs text-[#5f6368]">
+                          <span className="rounded-full bg-white px-2 py-0.5 font-medium ring-1 ring-[#e8eaed]">{fileKind(file.name, file.type)}</span>
+                          <span>{formatFileSize(file.size)}</span>
+                          <span>追加: {file.addedBy}</span>
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+                <div className="mt-3 flex justify-end">
+                  <AttachmentAddButton inputId={inputId} compact />
+                </div>
+              </div>
+            )}
+          </Panel>
+        );
+      }
+
+      function Detail({ task, activeTag, onTagSelect, onPatch, onComplete, ownedStampItems, onAddCommentStamp }) {
+        const meta = statusMeta[task.status];
+        function handleAttachmentFiles(files) {
+          const addedAt = now.toISOString();
+          const nextAttachments = files.map((file, index) => ({
+            id: `${task.id}-file-${Date.now()}-${index}`,
+            name: file.name,
+            size: file.size,
+            type: file.type,
+            source: "device",
+            addedBy: "Entaka",
+            addedAt,
+          }));
+          onPatch(task.id, { attachments: [...(task.attachments || []), ...nextAttachments] }, "添付ファイルを追加");
+        }
+        function handleRemoveAttachment(fileId) {
+          onPatch(task.id, { attachments: (task.attachments || []).filter((file) => file.id !== fileId) }, "添付ファイルを削除");
+        }
+        return (
+          <div className="flex h-full min-h-[720px] flex-col">
+            <div className="border-b border-[#e8eaed] p-5">
+              <div className="flex items-start justify-between gap-3">
+                <div>
+                  <div className="text-xs font-medium text-[#5f6368]">{task.id} / {actionLabels[task.action_type]}</div>
+                  <h2 className="mt-2 text-xl font-normal leading-7 text-[#202124]">{task.title}</h2>
+                </div>
+                <button onClick={() => onComplete(task.id)} className="grid h-10 w-10 shrink-0 place-items-center rounded-full text-[#5f6368] transition hover:bg-[#e8f0fe] hover:text-[#1967d2]" title="完了列へ移動">
+                  <Icon name="check" className="h-4 w-4" />
+                </button>
+              </div>
+              <div className="mt-4 flex flex-wrap gap-2">
+                <Chip className={meta.tone}>{meta.label}</Chip>
+                <Chip className="bg-[#f1f3f4] text-[#5f6368]">{ownerMeta[task.owner]}</Chip>
+                <Chip className={priorityMeta[task.priority].tone}>{task.priority} {priorityMeta[task.priority].label}</Chip>
+              </div>
+            </div>
+            <div className="flex-1 overflow-y-auto p-4">
+              <div className="space-y-4">
+                <Panel title="引継ぎノート"><p className="text-sm leading-7 text-[#3c4043]">{task.handoff_note}</p></Panel>
+                <TaskAttachments task={task} onAddFiles={handleAttachmentFiles} onRemoveFile={handleRemoveAttachment} />
+                {task.blocked_reason && <Panel title="停滞理由" danger><p className="text-sm leading-7 text-[#c5221f]">{task.blocked_reason}</p></Panel>}
+                <Panel title="ステータス">
+                  <div className="grid grid-cols-2 gap-2">
+                    <ActionButton icon="bot" label="AIへ戻す" onClick={() => onPatch(task.id, { status: "needs-ai", owner: "ai-batch", blocked_reason: null }, "AI処理待ちへ変更")} />
+                    <ActionButton icon="user" label="人間確認" onClick={() => onPatch(task.id, { status: "needs-human", owner: "human", blocked_reason: null }, "人間確認待ちへ変更")} />
+                    <ActionButton icon="play" label="処理開始" onClick={() => onPatch(task.id, { status: "in-progress", blocked_reason: null }, "処理開始")} />
+                    <ActionButton icon="search" label="レビュー開始" onClick={() => onPatch(task.id, { status: "reviewing", owner: "human", blocked_reason: null }, "レビュー中へ変更")} />
+                    <ActionButton icon="check" label="完了する" onClick={() => onComplete(task.id)} />
+                    <ActionButton icon="pause" label="停滞にする" onClick={() => onPatch(task.id, { status: "blocked", blocked_reason: "判断材料が不足" }, "停滞に変更")} />
+                  </div>
+                </Panel>
+                <Panel title="共同作業中">
+                  <div className="flex items-center justify-between gap-3">
+                    <div className="flex -space-x-2">{task.assignees.map((id) => <Avatar key={id} id={id} size="md" />)}</div>
+                    <div className="flex items-center gap-4">
+                      <SocialCount icon="heart" value={task.thanks_count} />
+                      <SocialCount icon="message" value={task.comments_count} />
+                    </div>
+                  </div>
+                  <div className="mt-3 flex flex-wrap gap-2">
+                    {task.assignees.map((id) => <Chip key={id} className="bg-[#f1f3f4] text-[#3c4043]"><Avatar id={id} />{member(id).name}</Chip>)}
+                  </div>
+                </Panel>
+                <CommentList key={task.id} task={task} ownedStampItems={ownedStampItems} onAddStamp={onAddCommentStamp} />
+                <Panel title="ワークタグ">
+                  <div className="flex flex-wrap gap-2">
+                    {task.tags.map((tag) => (
+                      <button
+                        key={tag}
+                        onClick={() => onTagSelect(tag)}
+                        className={cn(
+                          "rounded-full px-2 py-1 text-xs font-medium transition",
+                          activeTag === tag ? "bg-[#e8f0fe] text-[#1967d2] ring-1 ring-[#d2e3fc]" : "bg-[#f1f3f4] text-[#5f6368] hover:bg-[#e8eaed]"
+                        )}
+                        title={`${tag} のワークだけを表示`}
+                      >
+                        {tag}
+                      </button>
+                    ))}
+                  </div>
+                </Panel>
+                <Panel title="履歴ログ">
+                  <div className="space-y-3">{task.activity.map((item, index) => (
+                    <div key={`${item.timestamp}-${index}`} className="flex gap-3">
+                      <div className="mt-1 h-2 w-2 shrink-0 rounded-full bg-[#1a73e8]" />
+                      <div><div className="text-sm font-medium text-[#3c4043]">{item.action}</div><div className="text-xs text-[#9aa0a6]">{formatTime(item.timestamp)} / {item.actor}</div></div>
+                    </div>
+                  ))}</div>
+                </Panel>
+              </div>
+            </div>
+          </div>
+        );
+      }
+
+      function ActionButton({ icon, label, onClick }) {
+        return (
+          <button onClick={onClick} className="inline-flex min-h-10 items-center justify-center gap-2 rounded-full border border-[#dadce0] bg-white px-3 py-2 text-sm font-medium text-[#3c4043] transition hover:bg-[#f8fafd]">
+            <Icon name={icon} className="h-4 w-4" />
+            {label}
+          </button>
+        );
+      }
+
+      function App() {
+        const [tasks, setTasks] = useState(seedTasks);
+        const [archive, setArchive] = useState([]);
+        const [selectedId, setSelectedId] = useState(seedTasks[0].id);
+        const [query, setQuery] = useState("");
+        const [statusFilter, setStatusFilter] = useState("all");
+        const [viewMode, setViewMode] = useState("board");
+        const [shopPurchases, setShopPurchases] = useState([]);
+        const [activeTag, setActiveTag] = useState("");
+        const [profilePopup, setProfilePopup] = useState(null);
+        const [draftTitle, setDraftTitle] = useState("");
+        const [draftPriority, setDraftPriority] = useState("P2");
+        const [detailOpen, setDetailOpen] = useState(true);
+        const [detailWidth, setDetailWidth] = useState(380);
+        const [log, setLog] = useState(["07:30 GET /api/board -> 10 tasks", "07:30 finance blocked -> T0004", "07:30 review queue -> 2 tasks", "07:30 next executable -> T0003"]);
+        const currentProjectName = "プロジェクト_あわい";
+
+        const selected = tasks.find((task) => task.id === selectedId) || tasks[0];
+        const showTaskDetail = detailOpen && viewMode !== "shop";
+        const filtered = tasks.filter((task) => {
+          const haystack = `${task.id} ${task.title} ${task.handoff_note} ${task.tags.join(" ")}`.toLowerCase();
+          const matchesTag = !activeTag || task.tags.includes(activeTag);
+          return matchesTag && (statusFilter === "all" || task.status === statusFilter) && haystack.includes(query.toLowerCase());
+        });
+        const byStatus = Object.keys(statusMeta).map((status) => ({ status, tasks: filtered.filter((task) => task.status === status) }));
+        const inProgress = tasks.filter((task) => task.status === "in-progress").length;
+        const blocked = tasks.filter((task) => task.status === "blocked").length;
+        const needsHuman = tasks.filter((task) => task.status === "needs-human").length;
+        const aiQueue = tasks.filter((task) => task.status === "needs-ai").length;
+        const staleCount = tasks.filter((task) => hoursSince(task.updated_at) >= 72 && !["blocked", "done"].includes(task.status)).length;
+        const executable = tasks
+          .filter((task) => task.status === "needs-ai" && task.owner === "ai-batch")
+          .sort((a, b) => Object.keys(priorityMeta).indexOf(a.priority) - Object.keys(priorityMeta).indexOf(b.priority))[0];
+
+        function appendLog(message) {
+          setLog((current) => [`11:30 ${message}`, ...current].slice(0, 8));
+        }
+        function clampDetailWidth(width) {
+          return Math.min(680, Math.max(320, Math.round(width)));
+        }
+        function startDetailResize(event) {
+          if (event.button !== undefined && event.button !== 0) return;
+          event.preventDefault();
+          event.stopPropagation();
+          setDetailOpen(true);
+          const startX = event.clientX;
+          const startWidth = detailWidth;
+          const previousCursor = document.body.style.cursor;
+          const previousSelect = document.body.style.userSelect;
+          document.body.style.cursor = "col-resize";
+          document.body.style.userSelect = "none";
+          function handleMove(moveEvent) {
+            setDetailWidth(clampDetailWidth(startWidth - (moveEvent.clientX - startX)));
+          }
+          function handleUp() {
+            document.body.style.cursor = previousCursor;
+            document.body.style.userSelect = previousSelect;
+            window.removeEventListener("pointermove", handleMove);
+            window.removeEventListener("pointerup", handleUp);
+            window.removeEventListener("pointercancel", handleUp);
+          }
+          window.addEventListener("pointermove", handleMove);
+          window.addEventListener("pointerup", handleUp);
+          window.addEventListener("pointercancel", handleUp);
+        }
+        function selectTagFilter(tag) {
+          setActiveTag(tag);
+          setStatusFilter("all");
+          setQuery("");
+          appendLog(`filter tag -> ${tag}`);
+        }
+        function changeViewMode(mode) {
+          setViewMode(mode);
+          if (mode === "shop") {
+            setStatusFilter("all");
+            setActiveTag("");
+            setQuery("");
+          }
+        }
+        function goBoardHome() {
+          setViewMode("board");
+          setStatusFilter("all");
+          setActiveTag("");
+          setQuery("");
+          setDetailOpen(true);
+          window.scrollTo({ top: 0, behavior: "smooth" });
+          appendLog("home -> board");
+        }
+        function filterByStatus(status) {
+          setStatusFilter(status);
+          setActiveTag("");
+          setQuery("");
+          if (viewMode === "shop") setViewMode("board");
+          appendLog(`filter status -> ${statusMeta[status]?.label || status}`);
+        }
+        function shopAppliedTag(item) {
+          if (item.type === "skills") return "外部スキル";
+          if (item.type === "commons") return "コモンズ";
+          return "スタンプ";
+        }
+        function purchaseShopItem(item) {
+          if (!item) return;
+          const alreadyOwned = shopPurchases.includes(item.id);
+          if (!alreadyOwned) {
+            setShopPurchases((current) => [...current, item.id]);
+          }
+          if (selected && !alreadyOwned) {
+            const tag = shopAppliedTag(item);
+            setTasks((current) => current.map((task) => task.id === selected.id ? {
+              ...task,
+              tags: [...new Set([...task.tags, tag])],
+              comments_count: task.comments_count + 1,
+              updated_at: now.toISOString(),
+              activity: [{ timestamp: now.toISOString(), actor: "shop", action: `ストア購入: ${item.name}` }, ...task.activity],
+            } : task));
+          }
+          appendLog(`${alreadyOwned ? "SHOP owned" : "SHOP purchase"} -> ${item.name}`);
+        }
+        function sendStamp(item, emote) {
+          if (!item || !emote) return;
+          if (!shopPurchases.includes(item.id)) return appendLog(`stamp locked -> ${item.name}`);
+          if (!selected) return appendLog("stamp target not found");
+          setTasks((current) => current.map((task) => task.id === selected.id ? {
+            ...task,
+            thanks_count: task.thanks_count + emote.points,
+            updated_at: now.toISOString(),
+            activity: [{ timestamp: now.toISOString(), actor: "shop", action: `${item.name} ${emote.points}Pointを送信` }, ...task.activity],
+          } : task));
+          appendLog(`stamp ${emote.points}P -> ${selected.id}`);
+        }
+        function addCommentStamp(taskId, commentIndex, emote) {
+          if (!taskId || !emote) return;
+          setTasks((current) => current.map((task) => {
+            if (task.id !== taskId) return task;
+            const currentReactions = task.comment_reactions || {};
+            const commentReactions = currentReactions[commentIndex] || [];
+            return {
+              ...task,
+              thanks_count: task.thanks_count + emote.points,
+              comment_reactions: {
+                ...currentReactions,
+                [commentIndex]: [
+                  ...commentReactions,
+                  {
+                    packId: emote.packId,
+                    packName: emote.packName,
+                    icon: emote.icon,
+                    points: emote.points,
+                  },
+                ],
+              },
+              updated_at: now.toISOString(),
+              activity: [{ timestamp: now.toISOString(), actor: "shop", action: `コメント${commentIndex + 1}へ${emote.icon} ${emote.points}Pointを追加` }, ...task.activity],
+            };
+          }));
+          appendLog(`comment stamp ${emote.points}P -> ${taskId}#${commentIndex + 1}`);
+        }
+        function handleProfileClickCapture(event) {
+          if (event.target.closest("[data-profile-popover]")) return;
+          const trigger = event.target.closest("[data-profile-id]");
+          if (!trigger) {
+            setProfilePopup(null);
+            return;
+          }
+          const memberId = trigger.dataset.profileId;
+          const rect = trigger.getBoundingClientRect();
+          const left = Math.min(window.innerWidth - 336, Math.max(12, rect.right - 320));
+          const maxTop = Math.max(12, window.innerHeight - 385);
+          const top = Math.min(maxTop, Math.max(72, rect.bottom + 8));
+          event.stopPropagation();
+          setProfilePopup((current) => current?.memberId === memberId ? null : { memberId, left, top });
+        }
+        function patchTask(id, patch, action = "更新") {
+          setTasks((current) => current.map((task) => task.id === id ? { ...task, ...patch, updated_at: now.toISOString(), activity: [{ timestamp: now.toISOString(), actor: "human", action }, ...task.activity] } : task));
+          appendLog(`PATCH /api/board/${id} -> ${action}`);
+        }
+        function addTask() {
+          const title = draftTitle.trim();
+          if (!title) return;
+          const id = nextId(tasks, archive);
+          const newTask = {
+            id, title, status: "needs-ai", owner: "ai-batch", priority: draftPriority, action_type: "other",
+            handoff_note: "人間がワークを投入済み。次はAIが実行可能な最小ステップに分解し、完了後に人間へ確認ポイントを返す。",
+            blocked_reason: null, assignees: ["entaka", "ken"], comments_count: 0, thanks_count: 0, tags: ["新規", "未分類"],
+            created_at: now.toISOString(), updated_at: now.toISOString(),
+            activity: [{ timestamp: now.toISOString(), actor: "human", action: "ワークを作成" }],
+          };
+          setTasks((current) => [newTask, ...current]);
+          setSelectedId(id);
+          setDraftTitle("");
+          appendLog(`POST /api/board -> ${id}`);
+        }
+        function runDispatcher() {
+          if (!executable) return appendLog("dispatcher -> executable task not found");
+          patchTask(executable.id, {
+            status: "needs-human",
+            owner: "human",
+            handoff_note: "Claude Codeが優先度順に1件だけ処理した想定。次は人間が成果物の正しさ、公開可否、追加判断の有無を確認する。",
+          }, "ディスパッチャーが1件処理");
+          setSelectedId(executable.id);
+        }
+        function detectStale() {
+          let changed = 0;
+          setTasks((current) => current.map((task) => {
+            if (hoursSince(task.updated_at) < 72 || ["blocked", "done"].includes(task.status)) return task;
+            changed += 1;
+            return { ...task, status: "blocked", blocked_reason: "72時間変化なし", updated_at: now.toISOString(), activity: [{ timestamp: now.toISOString(), actor: "ai-batch", action: "72時間停滞を検知" }, ...task.activity] };
+          }));
+          appendLog(`stale-check -> ${changed} blocked`);
+        }
+        function completeTask(id) {
+          const task = tasks.find((item) => item.id === id);
+          if (!task) return;
+          setTasks((current) => current.map((item) => item.id === id ? {
+            ...item,
+            status: "done",
+            blocked_reason: null,
+            updated_at: now.toISOString(),
+            activity: [{ timestamp: now.toISOString(), actor: "human", action: "完了列へ移動" }, ...item.activity],
+          } : item));
+          setSelectedId(id);
+          appendLog(`PATCH /api/board/${id} -> done column`);
+        }
+
+        return (
+          <main onClickCapture={handleProfileClickCapture} className="min-h-screen bg-[#f8fafd] text-[#202124]">
+            <FloatingProfilePopover profile={profilePopup} tasks={tasks} requests={helpRequests} />
+            <section className="flex min-h-screen flex-col">
+              <header className="sticky top-0 z-30 flex min-h-16 flex-col gap-3 border-b border-[#e8eaed] bg-[#f8fafd]/95 px-4 py-3 backdrop-blur lg:flex-row lg:items-center">
+                <div className="flex min-w-[360px] flex-wrap items-center gap-3">
+                  <button className="grid h-10 w-10 place-items-center rounded-full text-[#5f6368] transition hover:bg-[#e8eaed]" title="メニュー">
+                    <Icon name="file" className="h-5 w-5" />
+                  </button>
+                  <button
+                    type="button"
+                    onClick={goBoardHome}
+                    className="flex items-center gap-3 rounded-2xl px-2 py-1 text-left transition hover:bg-[#e8eaed]/70 focus:outline-none focus:ring-2 focus:ring-[#d2e3fc]"
+                    title="カンバンボードへ戻る"
+                  >
+                    <div className="grid h-11 w-11 place-items-center"><DWorksLogo className="h-11 w-11" /></div>
+                    <div><h1 className="text-xl font-normal tracking-normal text-[#3c4043]">.d works</h1><p className="hidden text-xs text-[#5f6368] sm:block">AI Cowork Operations</p></div>
+                  </button>
+                  <div className="min-w-0 border-l border-[#dadce0] pl-3">
+                    <div className="text-[11px] font-medium leading-4 text-[#5f6368]">現在のプロジェクト</div>
+                    <div className="mt-0.5 flex min-w-0 items-center gap-2">
+                      <h2 className="truncate text-lg font-normal leading-6 text-[#202124]">{currentProjectName}</h2>
+                      <Icon name="star" className="h-4 w-4 shrink-0 text-[#fbbc04]" />
+                    </div>
+                  </div>
+                </div>
+                <div className="flex min-w-0 flex-1 items-center gap-3 rounded-full bg-[#edf2fa] px-4 py-2 transition focus-within:bg-white focus-within:shadow-[0_1px_6px_rgba(60,64,67,.28)] lg:max-w-[720px]">
+                  <Icon name="search" className="h-5 w-5 shrink-0 text-[#5f6368]" />
+                  <input value={query} onChange={(event) => setQuery(event.target.value)} placeholder={viewMode === "shop" ? "ストア内を検索" : "ワーク、タグ、引継ぎノートを検索"} className="min-w-0 flex-1 bg-transparent text-sm text-[#202124] outline-none placeholder:text-[#5f6368]" />
+                </div>
+                <div className="grid grid-cols-2 gap-2 sm:grid-cols-4 lg:ml-auto">
+                  <Metric label="進行中ワーク" value={inProgress} icon="play" active={statusFilter === "in-progress"} onClick={() => filterByStatus("in-progress")} />
+                  <Metric label="AI待ち" value={aiQueue} icon="bot" active={statusFilter === "needs-ai"} onClick={() => filterByStatus("needs-ai")} />
+                  <Metric label="人間待ち" value={needsHuman} icon="user" active={statusFilter === "needs-human"} onClick={() => filterByStatus("needs-human")} />
+                  <Metric label="停滞" value={blocked} icon="alert" danger={blocked > 0} active={statusFilter === "blocked"} onClick={() => filterByStatus("blocked")} />
+                </div>
+                <div className="flex items-center gap-2 rounded-full bg-white px-3 py-2 shadow-sm ring-1 ring-[#e8eaed]" title="共有メンバー">
+                  <div className="flex -space-x-2">{members.slice(0, 4).map((m) => <Avatar key={m.id} id={m.id} size="md" />)}<span className="inline-grid h-8 w-8 place-items-center rounded-full bg-[#f1f3f4] text-xs font-semibold text-[#5f6368] ring-2 ring-white">+1</span></div>
+                  <span className="hidden text-xs font-medium text-[#5f6368] sm:inline">5人で共有</span>
+                </div>
+                <button
+                  onClick={() => setDetailOpen((value) => !value)}
+                  aria-pressed={detailOpen}
+                  title={detailOpen ? "右カラムを閉じる" : "右カラムを開く"}
+                  className={cn(
+                    "grid h-11 w-11 place-items-center rounded-full bg-white text-[#5f6368] shadow-sm ring-1 ring-[#e8eaed] transition hover:bg-[#f8fafd] hover:text-[#202124]",
+                    detailOpen ? "text-[#1967d2] ring-[#d2e3fc]" : ""
+                  )}
+                >
+                  <Icon name="panel" className="h-5 w-5" />
+                </button>
+                <ProfileMenu memberId="entaka" />
+              </header>
+
+              {viewMode !== "shop" && !detailOpen && (
+                <button
+                  onClick={() => setDetailOpen(true)}
+                  title="右カラムを開く"
+                  className="fixed right-4 top-28 z-40 hidden h-11 w-11 place-items-center rounded-full border border-[#dadce0] bg-white text-[#1967d2] shadow-[0_4px_12px_rgba(60,64,67,.14)] transition hover:bg-[#e8f0fe] xl:grid"
+                >
+                  <Icon name="panel" className="h-5 w-5" />
+                </button>
+              )}
+
+              <section
+                className={cn("work-layout grid flex-1 gap-4 p-4", showTaskDetail ? "" : "detail-closed")}
+                style={{ "--detail-width": `${detailWidth}px` }}
+              >
+                <aside className="flex flex-col gap-3">
+                  <button onClick={() => (draftTitle.trim() ? addTask() : setDraftTitle("新規ワーク: "))} className="mb-1 inline-flex h-14 w-fit items-center gap-3 rounded-2xl bg-white px-6 text-sm font-medium text-[#3c4043] shadow-sm ring-1 ring-[#e8eaed] transition hover:bg-[#f8fafd]">
+                    <Icon name="plus" className="h-5 w-5 text-[#1a73e8]" />新規ワーク作成
+                  </button>
+                  <div className="rounded-3xl border border-[#e8eaed] bg-white p-3 shadow-sm">
+                    <div className="flex items-center justify-between"><div className="flex items-center gap-2 text-sm font-medium text-[#202124]"><Icon name="plus" className="h-4 w-4" />ワーク追加</div><Chip className="bg-[#e8f0fe] text-[#1967d2]">mock API</Chip></div>
+                    <div className="mt-3 flex gap-2">
+                      <input value={draftTitle} onChange={(event) => setDraftTitle(event.target.value)} onKeyDown={(event) => event.key === "Enter" && addTask()} placeholder="AIに渡す仕事を追加" className="min-w-0 flex-1 rounded-full border border-transparent bg-[#f1f3f4] px-4 py-2 text-sm outline-none transition focus:bg-white focus:shadow-[0_1px_4px_rgba(60,64,67,.24)]" />
+                      <select value={draftPriority} onChange={(event) => setDraftPriority(event.target.value)} className="rounded-full border border-[#dadce0] bg-white px-3 text-sm text-[#3c4043]">{Object.keys(priorityMeta).map((key) => <option key={key}>{key}</option>)}</select>
+                      <IconButton title="ワークを追加" onClick={addTask}><Icon name="plus" className="h-4 w-4" /></IconButton>
+                    </div>
+                  </div>
+                  <HelpRequestList requests={helpRequests} selectedId={selectedId} onSelect={setSelectedId} />
+                  <div className="rounded-3xl border border-[#e8eaed] bg-white p-3 shadow-sm">
+                    <div className="flex items-center gap-2 text-sm font-medium text-[#202124]"><Icon name="shield" className="h-4 w-4" />安全ルール</div>
+                    <div className="mt-3 space-y-2 text-sm text-[#5f6368]">
+                      <Rule icon="lock" text="X-Board-Token必須。主体別トークンでログ追跡。" />
+                      <Rule icon="clock" text="72時間変化なしならblockedへ。" />
+                    </div>
+                  </div>
+                  <div className="rounded-3xl border border-[#e8eaed] bg-white p-3 shadow-sm">
+                    <div className="mb-3 flex items-center justify-between"><div className="flex items-center gap-2 text-sm font-medium text-[#202124]"><Icon name="bot" className="h-4 w-4" />AI自動処理</div><button onClick={runDispatcher} className="inline-flex items-center gap-2 rounded-full bg-[#1a73e8] px-4 py-2 text-sm font-medium text-white shadow-sm transition hover:bg-[#1967d2]"><Icon name="play" className="h-4 w-4" />1件実行</button></div>
+                    <div className="rounded-2xl bg-[#f8fafd] p-3"><div className="text-xs font-medium text-[#5f6368]">Next executable</div><div className="mt-1 text-sm font-medium text-[#202124]">{executable ? `${executable.id} ${executable.title}` : "対象ワークなし"}</div><div className="mt-2 text-xs text-[#5f6368]">P0から順に、1件だけ処理。</div></div>
+                    <button onClick={detectStale} className="mt-2 inline-flex w-full items-center justify-center gap-2 rounded-full border border-[#dadce0] bg-white px-3 py-2 text-sm font-medium text-[#3c4043] transition hover:bg-[#f8fafd]"><Icon name="refresh" className="h-4 w-4" />72h停滞チェック {staleCount > 0 ? `(${staleCount})` : ""}</button>
+                  </div>
+                  <div className="rounded-3xl border border-[#e8eaed] bg-white p-3 text-[#202124] shadow-sm">
+                    <div className="flex items-center gap-2 text-sm font-semibold"><Icon name="history" className="h-4 w-4 text-[#5f6368]" />操作履歴</div>
+                    <div className="mt-3 space-y-2 font-mono text-xs text-[#5f6368]">{log.map((item, index) => <div key={`${item}-${index}`} className="truncate rounded-xl bg-[#f8fafd] px-2 py-1.5">{item}</div>)}</div>
+                  </div>
+                </aside>
+
+                <section className="min-w-0 overflow-hidden rounded-[28px] border border-[#e8eaed] bg-white p-3 shadow-sm">
+                  <div className="flex flex-col gap-3 2xl:flex-row 2xl:items-center 2xl:justify-between">
+                    <div className="hidden min-w-0 flex-1 items-center gap-2 rounded-full bg-[#f1f3f4] px-4 py-2 sm:flex"><Icon name="search" className="h-4 w-4 text-[#5f6368]" /><input value={query} onChange={(event) => setQuery(event.target.value)} placeholder={viewMode === "shop" ? "スキル、コモンズ、スタンプを検索" : "ID、タグ、引継ぎノートを検索"} className="min-w-0 flex-1 bg-transparent text-sm outline-none" /></div>
+                    <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between 2xl:justify-end">
+                      <ViewModeSwitch viewMode={viewMode} onChange={changeViewMode} />
+                      {viewMode !== "shop" && (
+                        <div className="flex items-center gap-1 overflow-x-auto rounded-full bg-[#f8fafd] p-1">
+                        <IconButton title="すべて" active={statusFilter === "all"} onClick={() => setStatusFilter("all")}><Icon name="filter" className="h-4 w-4" /></IconButton>
+                        {Object.entries(statusMeta).map(([key, meta]) => <IconButton key={key} title={meta.label} active={statusFilter === key} onClick={() => setStatusFilter(key)}><Icon name={meta.icon} className="h-4 w-4" /></IconButton>)}
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                  {activeTag && (
+                    <div className="mt-3 flex flex-wrap items-center gap-2 rounded-2xl bg-[#e8f0fe] px-3 py-2 text-sm text-[#1967d2]">
+                      <Icon name="filter" className="h-4 w-4 shrink-0" />
+                      <span className="font-medium">ワークタグ: {activeTag}</span>
+                      <span className="text-xs text-[#5f6368]">{filtered.length}件表示中</span>
+                      <button onClick={() => setActiveTag("")} className="ml-auto rounded-full px-3 py-1 text-xs font-medium text-[#1967d2] transition hover:bg-white/70">解除</button>
+                    </div>
+                  )}
+                  {viewMode === "board" && (
+                    <div className="mt-4 overflow-x-auto">
+                      <div className="grid min-w-[960px] items-start gap-3 lg:grid-cols-6">{byStatus.map(({ status, tasks }) => <Column key={status} status={status} tasks={tasks} selectedId={selectedId} onSelect={setSelectedId} />)}</div>
+                    </div>
+                  )}
+                  {viewMode === "list" && <ListView tasks={filtered} selectedId={selectedId} onSelect={setSelectedId} />}
+                  {viewMode === "gantt" && <GanttView tasks={filtered} selectedId={selectedId} onSelect={setSelectedId} />}
+                  {viewMode === "shop" && <ShopView query={query} selectedTask={selected} ownedItems={shopPurchases} onPurchase={purchaseShopItem} onSendStamp={sendStamp} />}
+                </section>
+
+                {showTaskDetail && (
+                  <aside className="relative min-w-0 rounded-[28px] border border-[#e8eaed] bg-white shadow-sm">
+                    <button
+                      onPointerDown={startDetailResize}
+                      title="右カラムの幅を調整"
+                      aria-label="右カラムの幅を調整"
+                      className="group absolute -left-2 top-0 z-20 hidden h-full w-4 cursor-col-resize items-stretch justify-center xl:flex"
+                    >
+                      <span className="my-6 block w-1 rounded-full bg-[#e8eaed] transition group-hover:bg-[#d2e3fc]" />
+                    </button>
+                    {selected ? (
+                      <Detail
+                        task={selected}
+                        activeTag={activeTag}
+                        onTagSelect={selectTagFilter}
+                        onPatch={patchTask}
+                        onComplete={completeTask}
+                        ownedStampItems={shopCatalog.stamps.filter((item) => shopPurchases.includes(item.id))}
+                        onAddCommentStamp={addCommentStamp}
+                      />
+                    ) : <div className="p-5 text-sm text-neutral-500">ワークがありません。</div>}
+                  </aside>
+                )}
+              </section>
+            </section>
+          </main>
+        );
+      }
+
+      function Rule({ icon, text }) {
+        return <div className="flex gap-2"><Icon name={icon} className="mt-0.5 h-4 w-4 shrink-0 text-[#1a73e8]" /><span>{text}</span></div>;
+      }
+
+      ReactDOM.createRoot(document.getElementById("root")).render(<App />);
+    </script>
+  </body>
+</html>
