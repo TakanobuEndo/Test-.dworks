@@ -100,6 +100,9 @@
         { id: "akiko", name: "Akiko", role: "SNS/PR", status: "確認中", image: "assets/avatar-akiko.png" },
         { id: "daisuke", name: "Daisuke", role: "財務・法務", status: "離席中", image: "assets/avatar-daisuke.png" },
         { id: "ken", name: "Ken", role: "AI/自動化", status: "稼働中", image: "assets/avatar-ken.png" },
+        { id: "hiro", name: "Hiro", role: "地域連携", status: "オンライン", image: "assets/avatar-hiro.png" },
+        { id: "kadoono", name: "Kadoono", role: "事業開発", status: "確認中", image: "assets/avatar-kadoono.png" },
+        { id: "yosuke", name: "Yosuke", role: "クリエイティブ", status: "作業中", image: "assets/avatar-yosuke.png" },
       ];
 
       const statusMeta = {
@@ -4327,7 +4330,7 @@
                     {visibleMembers.map((m) => <Avatar key={m.id} id={m.id} size="md" />)}
                     {extraMemberCount > 0 && <span className="inline-grid h-8 w-8 place-items-center rounded-full bg-[#f1f3f4] text-xs font-semibold text-[#5f6368] ring-2 ring-white">+{extraMemberCount}</span>}
                   </div>
-                  <span className="hidden text-xs font-medium text-[#5f6368] sm:inline">5人で共有</span>
+                  <span className="hidden text-xs font-medium text-[#5f6368] sm:inline">{members.length}人で共有</span>
                 </div>
                 <button
                   onClick={() => setDetailOpen((value) => !value)}
