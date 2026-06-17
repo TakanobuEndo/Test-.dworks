@@ -7,14 +7,12 @@
 </head>
 <body style="background-color: #f3f4f6; margin: 0;">
     <script>
-        // パスワードを「password123」に設定しています。変更したい場合はここを書き換えてください。
+        // パスワードを「password123」に設定しています。
         var password = prompt("パスワードを入力してください:");
         
-        if (password === "panasonic") {
-            // 現在のURL（.../401.html）から「401.html」の文字だけを消して、index.htmlの場所へ強制移動させます
-            var currentUrl = window.location.href;
-            var targetUrl = currentUrl.replace("401.html", "index.html");
-            window.location.replace(targetUrl);
+        if (password === "password123") {
+            // 正解の場合、先ほど確認できた確実なURLへ直接ジャンプさせます
+            window.location.href = "https://takanobuendo.github.io/Test-.dworks/";
         } else {
             alert("パスワードが違います。");
             window.location.reload();
