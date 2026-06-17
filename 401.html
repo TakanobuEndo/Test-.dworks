@@ -5,13 +5,16 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>アクセス制限</title>
 </head>
-<body style="background-color: #f3f4f6; font-family: sans-serif; display: flex; justify-content: center; align-items: center; height: 100vh; margin: 0;">
+<body style="background-color: #f3f4f6; margin: 0;">
     <script>
-        // 「password123」の部分を、あなたの好きなパスワード（半角英数字）に変更してください
+        // パスワードを「password123」に設定しています。変更したい場合はここを書き換えてください。
         var password = prompt("パスワードを入力してください:");
+        
         if (password === "panasonic") {
-            // 正解ならトップページ（index.html）へ進む
-            window.location.href = "./index.html"; 
+            // 現在のURL（.../401.html）から「401.html」の文字だけを消して、index.htmlの場所へ強制移動させます
+            var currentUrl = window.location.href;
+            var targetUrl = currentUrl.replace("401.html", "index.html");
+            window.location.replace(targetUrl);
         } else {
             alert("パスワードが違います。");
             window.location.reload();
